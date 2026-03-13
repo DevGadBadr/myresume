@@ -34,9 +34,9 @@ export default function PrintContent({ data }: PrintContentProps) {
             <CertificatesSection items={data.certificates as CertEntry[]} onChange={noop} />
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1.75rem' }}>
-            <AboutMeSection text={data.about} onChange={noop} />
-            <SkillsSection skills={data.skills} onChange={noop} />
             <EducationSection items={data.education as EducationEntry[]} onChange={noop} />
+            <SkillsSection skills={data.skills} onChange={noop} />
+            <AboutMeSection text={data.about} onChange={noop} />
           </div>
         </div>
         <div style={{ marginTop: '2rem' }}>

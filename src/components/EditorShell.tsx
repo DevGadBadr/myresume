@@ -205,6 +205,10 @@ export default function EditorShell({ initialData, canEdit }: EditorShellProps) 
   }, []);
 
   const handleDownloadPDF = useCallback(async () => {
+    if (pdfLoading) {
+      return;
+    }
+
     setPdfLoading(true);
     try {
       const res = await fetch(`${APP_BASE_PATH}/api/pdf`, { method: 'POST' });
@@ -213,19 +217,25 @@ export default function EditorShell({ initialData, canEdit }: EditorShellProps) 
       }
 
       const blob = await res.blob();
+      if (blob.size === 0) {
+        throw new Error('Generated PDF is empty');
+      }
+
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
       a.download = 'gad-badr-resume.pdf';
+      document.body.appendChild(a);
       a.click();
-      URL.revokeObjectURL(url);
+      a.remove();
+      window.setTimeout(() => URL.revokeObjectURL(url), 1000);
     } catch (error) {
       console.error(error);
       window.alert('PDF generation failed. Please try again.');
     } finally {
       setPdfLoading(false);
     }
-  }, []);
+  }, [pdfLoading]);
 
   const handleLogout = useCallback(async () => {
     setLogoutLoading(true);
@@ -289,6 +299,7 @@ export default function EditorShell({ initialData, canEdit }: EditorShellProps) 
             {saveError && <span className="text-xs text-red-600">{saveError}</span>}
 
             <button
+              type="button"
               onClick={handleDownloadPDF}
               disabled={pdfLoading}
               className="flex items-center gap-1.5 rounded bg-gray-900 px-3 py-1.5 text-xs text-white transition-colors hover:bg-gray-700 disabled:opacity-50"
@@ -299,6 +310,7 @@ export default function EditorShell({ initialData, canEdit }: EditorShellProps) 
             {canEdit ? (
               <>
                 <button
+                  type="button"
                   onClick={() => setIsEditing((value) => !value)}
                   className={`rounded px-3 py-1.5 text-xs font-medium transition-colors ${
                     editEnabled
@@ -309,6 +321,7 @@ export default function EditorShell({ initialData, canEdit }: EditorShellProps) 
                   {editEnabled ? 'Done Editing' : 'Edit Resume'}
                 </button>
                 <button
+                  type="button"
                   onClick={handleLogout}
                   disabled={logoutLoading}
                   className="rounded border border-gray-300 px-3 py-1.5 text-xs text-gray-700 transition-colors hover:bg-gray-100 disabled:opacity-50"
@@ -353,17 +366,17 @@ export default function EditorShell({ initialData, canEdit }: EditorShellProps) 
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1.75rem' }}>
-                <AboutMeSection
-                  text={data.about}
-                  onChange={(about) => setData((current) => ({ ...current, about }))}
+                <EducationSection
+                  items={data.education as EducationEntry[]}
+                  onChange={(education) => setData((current) => ({ ...current, education }))}
                 />
                 <SkillsSection
                   skills={data.skills}
                   onChange={(skills) => setData((current) => ({ ...current, skills }))}
                 />
-                <EducationSection
-                  items={data.education as EducationEntry[]}
-                  onChange={(education) => setData((current) => ({ ...current, education }))}
+                <AboutMeSection
+                  text={data.about}
+                  onChange={(about) => setData((current) => ({ ...current, about }))}
                 />
               </div>
             </div>
