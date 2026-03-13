@@ -1,0 +1,37 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    box-sizing: border-box;
+  }
+
+  body {
+    @apply bg-gray-100 text-gray-900;
+    font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  }
+}
+
+@layer components {
+  .section-heading {
+    @apply text-sm font-black uppercase tracking-widest text-gray-900;
+    @apply border-b-2 border-[#8B0000] pb-1 mb-3;
+    letter-spacing: 0.15em;
+  }
+}
+
+/* Print styles */
+@media print {
+  body {
+    background: white !important;
+  }
+
+  main {
+    background: white !important;
+  }
+
+  .no-print {
+    display: none !important;
+  }
+}
