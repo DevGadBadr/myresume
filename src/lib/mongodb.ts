@@ -1,8 +1,6 @@
 import mongoose from 'mongoose';
 import { getEnv } from '@/lib/env';
 
-const MONGODB_URI = getEnv().MONGODB_URI;
-
 interface MongooseCache {
   conn: typeof mongoose | null;
   promise: Promise<typeof mongoose> | null;
@@ -21,6 +19,7 @@ export async function connectDB() {
   if (global.mongooseCache.conn) return global.mongooseCache.conn;
 
   if (!global.mongooseCache.promise) {
+    const MONGODB_URI = getEnv().MONGODB_URI;
     global.mongooseCache.promise = mongoose.connect(MONGODB_URI, {
       bufferCommands: false,
     });
