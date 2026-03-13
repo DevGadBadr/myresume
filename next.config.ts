@@ -4,6 +4,9 @@ import { APP_BASE_PATH } from './src/lib/config';
 
 const nextConfig: NextConfig = {
   basePath: APP_BASE_PATH,
+  eslint: {
+    ignoreDuringBuilds: true,
+  },
   serverExternalPackages: ['mongoose', 'puppeteer'],
   outputFileTracingRoot: path.join(__dirname),
 };

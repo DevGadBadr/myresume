@@ -8,7 +8,7 @@ export const dynamic = 'force-dynamic';
 
 export default async function LoginPage() {
   if (await isAuthenticated()) {
-    redirect(APP_BASE_PATH);
+    redirect('/');
   }
 
   return (
@@ -27,7 +27,7 @@ export default async function LoginPage() {
         <LoginForm />
 
         <p className="mt-4 text-center text-sm text-gray-500">
-          <Link href={APP_BASE_PATH} className="text-[#8B0000] hover:underline">
+          <Link href="/" className="text-[#8B0000] hover:underline">
             Return to resume
           </Link>
         </p>

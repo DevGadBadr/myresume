@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev -p 3007",
+    "dev": "next dev -p 3008",
     "build": "rm -f tsconfig.tsbuildinfo && next build",
     "start": "next start -p 3007",
     "lint": "eslint . --max-warnings=0",

@@ -31,14 +31,16 @@ export default function PrintContent({ data }: PrintContentProps) {
         <div style={{ display: 'grid', gridTemplateColumns: '3fr 2fr', gap: '2rem', marginTop: '0' }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
             <ExperienceSection items={data.experience as ExperienceEntry[]} onChange={noop} />
-            <ProjectsSection items={data.projects as ProjectEntry[]} onChange={noop} />
+            <CertificatesSection items={data.certificates as CertEntry[]} onChange={noop} />
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1.75rem' }}>
             <AboutMeSection text={data.about} onChange={noop} />
             <SkillsSection skills={data.skills} onChange={noop} />
             <EducationSection items={data.education as EducationEntry[]} onChange={noop} />
-            <CertificatesSection items={data.certificates as CertEntry[]} onChange={noop} />
           </div>
+        </div>
+        <div style={{ marginTop: '2rem' }}>
+          <ProjectsSection items={data.projects as ProjectEntry[]} onChange={noop} />
         </div>
       </main>
     </EditModeContext.Provider>

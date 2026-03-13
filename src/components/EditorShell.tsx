@@ -53,6 +53,8 @@ export default function EditorShell({ initialData, canEdit }: EditorShellProps) 
   const [pdfLoading, setPdfLoading] = useState(false);
   const [logoutLoading, setLogoutLoading] = useState(false);
   const [autosaveReady, setAutosaveReady] = useState(false);
+  const [pageCount, setPageCount] = useState(1);
+  const contentRef = useRef<HTMLDivElement>(null);
   const skipNextAutosaveRef = useRef(true);
   const abortControllerRef = useRef<AbortController | null>(null);
   const saveSequenceRef = useRef(0);
@@ -184,6 +186,24 @@ export default function EditorShell({ initialData, canEdit }: EditorShellProps) 
     };
   }, []);
 
+  useEffect(() => {
+    const el = contentRef.current;
+    if (!el) return;
+
+    const PAGE_HEIGHT_MM = 273;
+    const MM_TO_PX = 96 / 25.4;
+    const pageHeightPx = PAGE_HEIGHT_MM * MM_TO_PX;
+
+    const update = () => {
+      const height = el.scrollHeight;
+      setPageCount(Math.max(1, Math.ceil(height / pageHeightPx)));
+    };
+
+    const observer = new ResizeObserver(update);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+
   const handleDownloadPDF = useCallback(async () => {
     setPdfLoading(true);
     try {
@@ -233,7 +253,7 @@ export default function EditorShell({ initialData, canEdit }: EditorShellProps) 
       value={{ isEditing: editEnabled, toggle: () => setIsEditing((value) => !value) }}
     >
       <div className="no-print sticky top-0 z-50 border-b border-gray-200 bg-white shadow-sm">
-        <div className="mx-auto flex max-w-5xl items-center justify-between gap-3 px-6 py-2">
+        <div className="mx-auto flex items-center justify-between gap-3 px-6 py-2" style={{ maxWidth: 'calc(210mm + 2rem)' }}>
           <div>
             <span className="text-xs font-semibold uppercase tracking-wider text-gray-500">
               Resume Editor
@@ -298,7 +318,7 @@ export default function EditorShell({ initialData, canEdit }: EditorShellProps) 
               </>
             ) : (
               <Link
-                href={`${APP_BASE_PATH}/login`}
+                href="/login"
                 className="rounded border border-gray-300 px-3 py-1.5 text-xs text-gray-700 transition-colors hover:bg-gray-100"
               >
                 Owner login
@@ -310,27 +330,29 @@ export default function EditorShell({ initialData, canEdit }: EditorShellProps) 
         {editEnabled && <div className="h-0.5 w-full bg-[#8B0000]" />}
       </div>
 
-      <div className="mx-auto max-w-5xl px-4 py-8">
-        <div className="rounded-sm bg-white shadow-xl">
-          <div className="p-8 md:p-12">
+      <div className="mx-auto px-4 py-8" style={{ maxWidth: 'calc(210mm + 2rem)' }}>
+        <div className="relative bg-white shadow-xl" style={{ padding: '12mm', fontSize: '13px' }}>
+          <div ref={contentRef} className="relative">
             <Header
               data={data.personalInfo}
               onChange={(personalInfo) => setData((current) => ({ ...current, personalInfo }))}
             />
 
-            <div className="mt-0 grid grid-cols-1 gap-8 md:grid-cols-[3fr_2fr]">
-              <div className="space-y-8">
+            <div style={{ display: 'grid', gridTemplateColumns: '3fr 2fr', gap: '2rem', marginTop: 0 }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
                 <ExperienceSection
                   items={data.experience as ExperienceEntry[]}
                   onChange={(experience) => setData((current) => ({ ...current, experience }))}
                 />
-                <ProjectsSection
-                  items={data.projects as ProjectEntry[]}
-                  onChange={(projects) => setData((current) => ({ ...current, projects }))}
+                <CertificatesSection
+                  items={data.certificates as CertEntry[]}
+                  onChange={(certificates) =>
+                    setData((current) => ({ ...current, certificates }))
+                  }
                 />
               </div>
 
-              <div className="space-y-7">
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1.75rem' }}>
                 <AboutMeSection
                   text={data.about}
                   onChange={(about) => setData((current) => ({ ...current, about }))}
@@ -343,14 +365,27 @@ export default function EditorShell({ initialData, canEdit }: EditorShellProps) 
                   items={data.education as EducationEntry[]}
                   onChange={(education) => setData((current) => ({ ...current, education }))}
                 />
-                <CertificatesSection
-                  items={data.certificates as CertEntry[]}
-                  onChange={(certificates) =>
-                    setData((current) => ({ ...current, certificates }))
-                  }
-                />
               </div>
             </div>
+
+            <div style={{ marginTop: '2rem' }}>
+              <ProjectsSection
+                items={data.projects as ProjectEntry[]}
+                onChange={(projects) => setData((current) => ({ ...current, projects }))}
+              />
+            </div>
+
+            {Array.from({ length: pageCount - 1 }, (_, i) => (
+              <div
+                key={i}
+                className="page-break-indicator"
+                style={{ top: `${(i + 1) * 273}mm` }}
+              >
+                <span className="page-break-label">
+                  Page {i + 1} ends · Page {i + 2} begins
+                </span>
+              </div>
+            ))}
           </div>
         </div>
 

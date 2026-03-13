@@ -84,13 +84,17 @@ function readExperienceEntry(value: unknown, path: string): ExperienceEntry {
 
 function readProjectEntry(value: unknown, path: string): ProjectEntry {
   const record = readObject(value, path);
-  return {
+  const entry: ProjectEntry = {
     id: readString(record.id, `${path}.id`),
     title: readString(record.title, `${path}.title`),
     description: readString(record.description, `${path}.description`),
     bullets: readStringArray(record.bullets, `${path}.bullets`),
     tags: readStringArray(record.tags, `${path}.tags`),
   };
+  if (typeof record.url === 'string' && record.url.trim()) {
+    entry.url = record.url.trim();
+  }
+  return entry;
 }
 
 function readEducationEntry(value: unknown, path: string): EducationEntry {

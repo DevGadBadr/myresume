@@ -9,7 +9,7 @@ Single-resume Next.js app for viewing, editing, and exporting a resume as PDF. T
 3. Install dependencies with `npm install`.
 4. Run `npm run dev`.
 
-The app runs on `http://localhost:3007/myresume`.
+The app runs on `http://localhost:3008/myresume`.
 
 ## Required Environment Variables
 
@@ -20,7 +20,7 @@ The app runs on `http://localhost:3007/myresume`.
 
 ## Scripts
 
-- `npm run dev`: start the dev server on port `3007`.
+- `npm run dev`: start the dev server on port `3008`.
 - `npm run lint`: run ESLint with the Next.js ruleset.
 - `npm run typecheck`: run TypeScript without emitting files.
 - `npm run test`: run the Node test suite.
@@ -38,3 +38,16 @@ The app runs on `http://localhost:3007/myresume`.
 - The app expects a long-lived Node server, not a serverless runtime.
 - The PDF route launches Puppeteer on the server and renders the internal print page.
 - Ensure the VPS has Chromium dependencies available for Puppeteer.
+- Production is served behind nginx at `https://devgadbadr.com/myresume`.
+- The recommended runtime is PM2 using `ecosystem.config.cjs`.
+- CI validates every push and pull request, and deploys automatically on pushes to `master`.
+- Required GitHub secrets for deployment:
+  - `RESUME_DEPLOY_HOST`
+  - `RESUME_DEPLOY_USER`
+  - `RESUME_DEPLOY_SSH_KEY`
+  - `RESUME_DEPLOY_PORT` (optional if SSH uses `22`)
+- The VPS must keep a non-committed `.env.production.local` or `.env.local` with:
+  - `MONGODB_URI`
+  - `AUTH_SECRET`
+  - `ADMIN_USERNAME`
+  - `ADMIN_PASSWORD`

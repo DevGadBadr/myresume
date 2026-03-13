@@ -21,6 +21,29 @@
   }
 }
 
+/* Page break indicators */
+.page-break-indicator {
+  position: absolute;
+  left: -12mm;
+  right: -12mm;
+  height: 0;
+  z-index: 10;
+  pointer-events: none;
+  border-top: 2px dashed #cbd5e1;
+}
+
+.page-break-label {
+  position: absolute;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: #f1f5f9;
+  color: #64748b;
+  font-size: 11px;
+  padding: 1px 10px;
+  border-radius: 9999px;
+  white-space: nowrap;
+}
+
 /* Print styles */
 @media print {
   body {
@@ -32,6 +55,10 @@
   }
 
   .no-print {
+    display: none !important;
+  }
+
+  .page-break-indicator {
     display: none !important;
   }
 }

@@ -27,6 +27,7 @@ export interface ProjectEntry {
   description: string;
   bullets: string[];
   tags: string[];
+  url?: string;
 }
 
 export interface EducationEntry {

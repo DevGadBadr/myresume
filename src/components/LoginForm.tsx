@@ -28,7 +28,7 @@ export default function LoginForm() {
         throw new Error(payload?.error ?? 'Login failed');
       }
 
-      router.push(APP_BASE_PATH);
+      router.push('/');
       router.refresh();
     } catch (submitError) {
       setError(submitError instanceof Error ? submitError.message : 'Login failed');

@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import type { ProjectEntry } from '@/types/resume';
 import { useEditMode } from '@/context/EditModeContext';
 import EditableText from '@/components/EditableText';
@@ -25,6 +26,7 @@ interface ProjectsSectionProps {
 
 export default function ProjectsSection({ items, onChange }: ProjectsSectionProps) {
   const { isEditing } = useEditMode();
+  const [urlDraft, setUrlDraft] = useState<Record<string, string>>({});
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } })
@@ -94,6 +96,8 @@ export default function ProjectsSection({ items, onChange }: ProjectsSectionProp
       <div className="space-y-5">
         {items.map((item, i) => {
           const bulletIds = item.bullets.map((_, bi) => `${item.id}-b-${bi}`);
+          const draftUrl = urlDraft[item.id] ?? item.url ?? '';
+
           return (
             <div key={item.id} className="relative group">
               {isEditing && (
@@ -107,88 +111,127 @@ export default function ProjectsSection({ items, onChange }: ProjectsSectionProp
                 </button>
               )}
 
-              <EditableText
-                value={item.title}
-                onChange={(v) => updateItem(i, { title: v })}
-                as="h3"
-                className="font-semibold text-gray-900 text-sm"
-              />
-              <EditableText
-                value={item.description}
-                onChange={(v) => updateItem(i, { description: v })}
-                as="p"
-                className="text-xs text-[#8B0000] font-medium mt-0.5"
-              />
+              <div>
+                {/* Title + URL link */}
+                <div className="flex items-baseline gap-1.5">
+                  <EditableText
+                    value={item.title}
+                    onChange={(v) => updateItem(i, { title: v })}
+                    as="h3"
+                    className="font-semibold text-gray-900 text-sm"
+                  />
+                  {!isEditing && item.url && (
+                    <a
+                      href={item.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-xs text-gray-400 hover:text-[#8B0000] transition-colors leading-none"
+                      title={item.url}
+                    >
+                      ↗
+                    </a>
+                  )}
+                </div>
 
-              {/* Tech tags */}
-              <div className="flex flex-wrap gap-1 mt-1.5">
-                {item.tags.map((tag, ti) => (
-                  <span
-                    key={ti}
-                    className="inline-flex items-center gap-0.5 px-2 py-0.5 rounded text-xs bg-[#8B000010] text-[#8B0000] border border-[#8B000030]"
-                  >
-                    {isEditing ? (
-                      <>
-                        <input
-                          type="text"
-                          value={tag}
-                          onChange={(e) => updateTag(i, ti, e.target.value)}
-                          className="bg-transparent outline-none w-16 text-xs text-[#8B0000]"
-                          style={{ fontFamily: 'inherit' }}
+                <EditableText
+                  value={item.description}
+                  onChange={(v) => updateItem(i, { description: v })}
+                  as="p"
+                  className="text-xs text-[#8B0000] font-medium mt-0.5"
+                />
+
+                {/* Tech tags */}
+                <div className="flex flex-wrap gap-1 mt-1.5">
+                  {item.tags.map((tag, ti) => (
+                    <span
+                      key={ti}
+                      className="inline-flex items-center gap-0.5 px-2 py-0.5 rounded text-xs bg-[#8B000010] text-[#8B0000] border border-[#8B000030]"
+                    >
+                      {isEditing ? (
+                        <>
+                          <input
+                            type="text"
+                            value={tag}
+                            onChange={(e) => updateTag(i, ti, e.target.value)}
+                            className="bg-transparent outline-none w-16 text-xs text-[#8B0000]"
+                            style={{ fontFamily: 'inherit' }}
+                          />
+                          <button
+                            onClick={() => removeTag(i, ti)}
+                            aria-label={`Remove tag ${tag}`}
+                            className="text-red-400 hover:text-red-600 text-xs"
+                          >
+                            ×
+                          </button>
+                        </>
+                      ) : (
+                        tag
+                      )}
+                    </span>
+                  ))}
+                  {isEditing && (
+                    <button
+                      onClick={() => addTag(i)}
+                      className="px-2 py-0.5 rounded text-xs border border-dashed border-[#8B0000] text-[#8B0000] hover:bg-red-50"
+                    >
+                      + Tag
+                    </button>
+                  )}
+                </div>
+
+                {/* Sortable bullets */}
+                <DndContext
+                  sensors={sensors}
+                  collisionDetection={closestCenter}
+                  onDragEnd={(e) => handleBulletDragEnd(i, e)}
+                >
+                  <SortableContext items={bulletIds} strategy={verticalListSortingStrategy}>
+                    <ul className="mt-2 space-y-1 pl-3">
+                      {item.bullets.map((bullet, bi) => (
+                        <SortableBullet
+                          key={bulletIds[bi]}
+                          id={bulletIds[bi]}
+                          value={bullet}
+                          isEditing={isEditing}
+                          onChange={(v) => updateBullet(i, bi, v)}
+                          onRemove={() => removeBullet(i, bi)}
                         />
-                        <button
-                          onClick={() => removeTag(i, ti)}
-                          aria-label={`Remove tag ${tag}`}
-                          className="text-red-400 hover:text-red-600 text-xs"
-                        >
-                          ×
-                        </button>
-                      </>
-                    ) : (
-                      tag
-                    )}
-                  </span>
-                ))}
+                      ))}
+                    </ul>
+                  </SortableContext>
+                </DndContext>
+
                 {isEditing && (
                   <button
-                    onClick={() => addTag(i)}
-                    className="px-2 py-0.5 rounded text-xs border border-dashed border-[#8B0000] text-[#8B0000] hover:bg-red-50"
+                    onClick={() => addBullet(i)}
+                    className="mt-1.5 ml-4 text-xs text-[#8B0000] hover:underline"
                   >
-                    + Tag
+                    + Add bullet
                   </button>
                 )}
+
+                {/* URL input — edit mode only */}
+                {isEditing && (
+                  <input
+                    type="url"
+                    placeholder="https://..."
+                    value={draftUrl}
+                    onChange={(e) =>
+                      setUrlDraft((prev) => ({ ...prev, [item.id]: e.target.value }))
+                    }
+                    onBlur={() => {
+                      const trimmed = draftUrl.trim();
+                      updateItem(i, { url: trimmed || undefined });
+                      setUrlDraft((prev) => {
+                        const next = { ...prev };
+                        delete next[item.id];
+                        return next;
+                      });
+                    }}
+                    className="mt-2 w-full text-xs text-gray-500 border border-dashed border-gray-300 rounded px-2 py-1 outline-none focus:border-gray-400 placeholder:text-gray-300"
+                  />
+                )}
               </div>
-
-              {/* Sortable bullets */}
-              <DndContext
-                sensors={sensors}
-                collisionDetection={closestCenter}
-                onDragEnd={(e) => handleBulletDragEnd(i, e)}
-              >
-                <SortableContext items={bulletIds} strategy={verticalListSortingStrategy}>
-                  <ul className="mt-2 space-y-1 pl-3">
-                    {item.bullets.map((bullet, bi) => (
-                      <SortableBullet
-                        key={bulletIds[bi]}
-                        id={bulletIds[bi]}
-                        value={bullet}
-                        isEditing={isEditing}
-                        onChange={(v) => updateBullet(i, bi, v)}
-                        onRemove={() => removeBullet(i, bi)}
-                      />
-                    ))}
-                  </ul>
-                </SortableContext>
-              </DndContext>
-
-              {isEditing && (
-                <button
-                  onClick={() => addBullet(i)}
-                  className="mt-1.5 ml-4 text-xs text-[#8B0000] hover:underline"
-                >
-                  + Add bullet
-                </button>
-              )}
 
               {i < items.length - 1 && <hr className="mt-4 border-dashed border-gray-200" />}
             </div>

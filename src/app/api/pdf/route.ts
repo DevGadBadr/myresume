@@ -15,7 +15,8 @@ export async function POST(req: Request) {
     // Set viewport to A4-ish width
     await page.setViewport({ width: 1240, height: 1754, deviceScaleFactor: 1 });
 
-    const printUrl = new URL(`${APP_BASE_PATH}/print`, req.url);
+    const port = process.env.PORT ?? '3007';
+    const printUrl = new URL(`http://localhost:${port}${APP_BASE_PATH}/print`);
 
     await page.goto(printUrl.toString(), {
       waitUntil: 'networkidle0',
