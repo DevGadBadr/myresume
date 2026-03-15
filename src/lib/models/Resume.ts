@@ -68,6 +68,8 @@ const ResumeSchema = new Schema<ResumeDocument>(
         title: { type: String, required: true },
         issuer: { type: String, required: true },
         date: { type: String, required: true },
+        hours: { type: String, required: false },
+        link: { type: String, required: false },
       },
     ],
   },

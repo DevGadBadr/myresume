@@ -53,6 +53,8 @@ export interface CertEntry {
   title: string;
   issuer: string;
   date: string;
+  hours?: string;
+  link?: string;
 }
 
 export interface ResumeData {

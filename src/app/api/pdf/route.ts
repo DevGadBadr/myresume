@@ -26,12 +26,7 @@ export async function POST(req: Request) {
     const pdf = await page.pdf({
       format: 'A4',
       printBackground: true,
-      margin: {
-        top: '12mm',
-        right: '12mm',
-        bottom: '12mm',
-        left: '12mm',
-      },
+      margin: { top: '12mm', right: '12mm', bottom: '12mm', left: '12mm' },
     });
 
     return new Response(Buffer.from(pdf), {

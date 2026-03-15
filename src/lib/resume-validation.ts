@@ -145,12 +145,15 @@ function readEducationEntry(value: unknown, path: string): EducationEntry {
 
 function readCertificateEntry(value: unknown, path: string): CertEntry {
   const record = readObject(value, path);
-  return {
+  const entry: CertEntry = {
     id: readString(record.id, `${path}.id`),
     title: readString(record.title, `${path}.title`),
     issuer: readString(record.issuer, `${path}.issuer`),
     date: readString(record.date, `${path}.date`),
   };
+  if (typeof record.hours === 'string' && record.hours.trim()) entry.hours = record.hours.trim();
+  if (typeof record.link === 'string' && record.link.trim()) entry.link = record.link.trim();
+  return entry;
 }
 
 export function normalizeResumeData(value: unknown): ResumeData {

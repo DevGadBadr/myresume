@@ -26,6 +26,12 @@ interface PrintContentProps {
 export default function PrintContent({ data }: PrintContentProps) {
   return (
     <EditModeContext.Provider value={{ isEditing: false, toggle: noop }}>
+      <style>{`
+        @media print {
+          section { break-inside: avoid; }
+          h2, h3 { break-after: avoid; }
+        }
+      `}</style>
       <main className="bg-white px-8 py-10 text-[13px] text-gray-900 print:px-0 print:py-0">
         <Header data={data.personalInfo} onChange={noop} />
         <div style={{ display: 'grid', gridTemplateColumns: '3fr 2fr', gap: '2rem', marginTop: '0' }}>

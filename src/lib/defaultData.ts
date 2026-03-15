@@ -128,6 +128,8 @@ export const DEFAULT_RESUME_DATA: ResumeData = {
       title: 'Python Programming',
       issuer: 'Udemy',
       date: 'May 16, 2023',
+      hours: '40 Hours',
+      link: 'https://www.udemy.com/certificate/example',
     },
     {
       id: '2',
