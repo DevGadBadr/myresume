@@ -41,7 +41,16 @@ const ResumeSchema = new Schema<ResumeDocument>(
         description: { type: String, required: true },
         bullets: [{ type: String, required: true }],
         tags: [{ type: String, required: true }],
-        url: { type: String, required: false },
+        deployment: {
+          url: { type: String, required: false },
+          credentials: [
+            {
+              id: { type: String, required: true },
+              label: { type: String, required: true },
+              value: { type: String, required: true },
+            },
+          ],
+        },
       },
     ],
     skills: [{ type: String, required: true }],

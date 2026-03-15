@@ -5,6 +5,8 @@ import type {
   EducationEntry,
   ExperienceEntry,
   PersonalInfo,
+  ProjectCredentialField,
+  ProjectDeployment,
   ProjectEntry,
   ResumeData,
 } from '@/types/resume';
@@ -82,6 +84,40 @@ function readExperienceEntry(value: unknown, path: string): ExperienceEntry {
   };
 }
 
+function readProjectCredentialField(value: unknown, path: string): ProjectCredentialField {
+  const record = readObject(value, path);
+  return {
+    id: readString(record.id, `${path}.id`),
+    label: readString(record.label, `${path}.label`),
+    value: readString(record.value, `${path}.value`),
+  };
+}
+
+function readProjectDeployment(value: unknown, path: string): ProjectDeployment {
+  const record = readObject(value, path);
+  const deployment: ProjectDeployment = {};
+
+  if (typeof record.url === 'string' && record.url.trim()) {
+    deployment.url = record.url.trim();
+  }
+
+  if (record.credentials !== undefined) {
+    if (!Array.isArray(record.credentials)) {
+      throw new ResumeValidationError(`${path}.credentials must be an array`);
+    }
+
+    const credentials = record.credentials.map((item, index) =>
+      readProjectCredentialField(item, `${path}.credentials[${index}]`)
+    );
+
+    if (credentials.length > 0) {
+      deployment.credentials = credentials;
+    }
+  }
+
+  return deployment;
+}
+
 function readProjectEntry(value: unknown, path: string): ProjectEntry {
   const record = readObject(value, path);
   const entry: ProjectEntry = {
@@ -91,8 +127,8 @@ function readProjectEntry(value: unknown, path: string): ProjectEntry {
     bullets: readStringArray(record.bullets, `${path}.bullets`),
     tags: readStringArray(record.tags, `${path}.tags`),
   };
-  if (typeof record.url === 'string' && record.url.trim()) {
-    entry.url = record.url.trim();
+  if (record.deployment !== undefined) {
+    entry.deployment = readProjectDeployment(record.deployment, `${path}.deployment`);
   }
   return entry;
 }

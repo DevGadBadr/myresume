@@ -21,13 +21,24 @@ export interface ExperienceEntry {
   bullets: string[];
 }
 
+export interface ProjectCredentialField {
+  id: string;
+  label: string;
+  value: string;
+}
+
+export interface ProjectDeployment {
+  url?: string;
+  credentials?: ProjectCredentialField[];
+}
+
 export interface ProjectEntry {
   id: string;
   title: string;
   description: string;
   bullets: string[];
   tags: string[];
-  url?: string;
+  deployment?: ProjectDeployment;
 }
 
 export interface EducationEntry {

@@ -66,6 +66,13 @@ export const DEFAULT_RESUME_DATA: ResumeData = {
         'Reduced manual clinic data entry time by over 80%.',
       ],
       tags: ['React', 'NestJS', 'Puppeteer', 'ClickUp API'],
+      deployment: {
+        url: 'https://demo.example.com/clinic-automation',
+        credentials: [
+          { id: 'clinic-demo-email', label: 'Email', value: 'demo@example.com' },
+          { id: 'clinic-demo-password', label: 'Password', value: 'demo_pass_2026' },
+        ],
+      },
     },
     {
       id: '3',

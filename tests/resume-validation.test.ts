@@ -17,10 +17,31 @@ test('normalizeResumeData trims and preserves the expected shape', () => {
     ...DEFAULT_RESUME_DATA,
     about: ` ${DEFAULT_RESUME_DATA.about} `,
     skills: [' TypeScript ', 'React'],
+    projects: DEFAULT_RESUME_DATA.projects.map((project, index) =>
+      index === 0
+        ? {
+            ...project,
+            deployment: {
+              url: ' https://demo.example.com/app ',
+              credentials: [
+                { id: ' login-email ', label: ' Email ', value: ' tester@example.com ' },
+                { id: ' login-password ', label: ' Password ', value: ' secret ' },
+              ],
+            },
+          }
+        : project
+    ),
   });
 
   assert.equal(normalized.about, DEFAULT_RESUME_DATA.about);
   assert.deepEqual(normalized.skills, ['TypeScript', 'React']);
+  assert.deepEqual(normalized.projects[0].deployment, {
+    url: 'https://demo.example.com/app',
+    credentials: [
+      { id: 'login-email', label: 'Email', value: 'tester@example.com' },
+      { id: 'login-password', label: 'Password', value: 'secret' },
+    ],
+  });
 });
 
 test('tryNormalizeResumeData rejects malformed payloads', () => {
