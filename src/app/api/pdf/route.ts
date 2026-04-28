@@ -2,6 +2,17 @@ import { NextResponse } from 'next/server';
 import puppeteer from 'puppeteer';
 import { APP_BASE_PATH } from '@/lib/config';
 
+function getPrintOrigin(req: Request) {
+  const requestUrl = new URL(req.url);
+
+  if (requestUrl.protocol === 'http:') {
+    return requestUrl.origin;
+  }
+
+  const port = process.env.PORT || requestUrl.port || '3007';
+  return `http://127.0.0.1:${port}`;
+}
+
 export async function POST(req: Request) {
   let browser = null;
   try {
@@ -16,8 +27,7 @@ export async function POST(req: Request) {
     // Set viewport to A4 dimensions at 96dpi (210mm × 297mm)
     await page.setViewport({ width: 794, height: 1123, deviceScaleFactor: 2 });
 
-    const requestUrl = new URL(req.url);
-    const printUrl = new URL(`${APP_BASE_PATH}/print`, requestUrl.origin);
+    const printUrl = new URL(`${APP_BASE_PATH}/print`, getPrintOrigin(req));
     if (body?.templateId) {
       printUrl.searchParams.set('template', body.templateId);
     }
