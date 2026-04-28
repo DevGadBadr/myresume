@@ -3,25 +3,17 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import type {
-  CertEntry,
-  EducationEntry,
-  ExperienceEntry,
-  ProjectEntry,
-  ResumeData,
-} from '@/types/resume';
+import type { ResumeData } from '@/types/resume';
 import { EditModeContext } from '@/context/EditModeContext';
 import { APP_BASE_PATH, RESUME_DRAFT_STORAGE_KEY } from '@/lib/config';
+import { PAGE_WIDTH_MM } from '@/lib/page-layout';
 import { tryNormalizeResumeData } from '@/lib/resume-validation';
-import Header from '@/components/sections/Header';
-import AboutMeSection from '@/components/sections/AboutMeSection';
-import ExperienceSection from '@/components/sections/ExperienceSection';
-import ProjectsSection from '@/components/sections/ProjectsSection';
-import SkillsSection from '@/components/sections/SkillsSection';
-import EducationSection from '@/components/sections/EducationSection';
-import CertificatesSection from '@/components/sections/CertificatesSection';
+import OnlineResume from '@/components/OnlineResume';
+import TemplateEditor from '@/components/TemplateEditor';
+import { DEFAULT_TEMPLATE_ID } from '@/lib/resume-template';
 
 type SaveStatus = 'idle' | 'dirty' | 'saving' | 'saved' | 'error';
+type WorkspaceMode = 'main' | 'templates';
 
 interface EditorShellProps {
   initialData: ResumeData;
@@ -47,14 +39,16 @@ export default function EditorShell({ initialData, canEdit }: EditorShellProps) 
   const router = useRouter();
   const [data, setData] = useState<ResumeData>(initialData);
   const [isEditing, setIsEditing] = useState(false);
+  const [workspaceMode, setWorkspaceMode] = useState<WorkspaceMode>('main');
+  const [activeTemplateId, setActiveTemplateId] = useState(
+    initialData.activeTemplateId ?? initialData.templates[0]?.id ?? DEFAULT_TEMPLATE_ID
+  );
   const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle');
   const [saveError, setSaveError] = useState<string | null>(null);
   const [lastSavedAt, setLastSavedAt] = useState<string | null>(null);
   const [pdfLoading, setPdfLoading] = useState(false);
   const [logoutLoading, setLogoutLoading] = useState(false);
   const [autosaveReady, setAutosaveReady] = useState(false);
-  const [pageCount, setPageCount] = useState(1);
-  const contentRef = useRef<HTMLDivElement>(null);
   const skipNextAutosaveRef = useRef(true);
   const abortControllerRef = useRef<AbortController | null>(null);
   const saveSequenceRef = useRef(0);
@@ -62,6 +56,7 @@ export default function EditorShell({ initialData, canEdit }: EditorShellProps) 
 
   useEffect(() => {
     setData(initialData);
+    setActiveTemplateId(initialData.activeTemplateId ?? initialData.templates[0]?.id ?? DEFAULT_TEMPLATE_ID);
   }, [initialData]);
 
   useEffect(() => {
@@ -78,6 +73,11 @@ export default function EditorShell({ initialData, canEdit }: EditorShellProps) 
         const normalizedDraft = tryNormalizeResumeData(parsed.data);
         if (normalizedDraft.ok) {
           setData(normalizedDraft.data);
+          setActiveTemplateId(
+            normalizedDraft.data.activeTemplateId ??
+              normalizedDraft.data.templates[0]?.id ??
+              DEFAULT_TEMPLATE_ID
+          );
           setSaveStatus('dirty');
           setLastSavedAt(parsed.updatedAt ?? null);
         } else {
@@ -186,24 +186,6 @@ export default function EditorShell({ initialData, canEdit }: EditorShellProps) 
     };
   }, []);
 
-  useEffect(() => {
-    const el = contentRef.current;
-    if (!el) return;
-
-    const PAGE_HEIGHT_MM = 273;
-    const MM_TO_PX = 96 / 25.4;
-    const pageHeightPx = PAGE_HEIGHT_MM * MM_TO_PX;
-
-    const update = () => {
-      const height = el.scrollHeight;
-      setPageCount(Math.max(1, Math.ceil(height / pageHeightPx)));
-    };
-
-    const observer = new ResizeObserver(update);
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, []);
-
   const handleDownloadPDF = useCallback(async () => {
     if (pdfLoading) {
       return;
@@ -211,7 +193,14 @@ export default function EditorShell({ initialData, canEdit }: EditorShellProps) 
 
     setPdfLoading(true);
     try {
-      const res = await fetch(`${APP_BASE_PATH}/api/pdf`, { method: 'POST' });
+      const templateId = workspaceMode === 'templates' ? activeTemplateId : DEFAULT_TEMPLATE_ID;
+      const templateName =
+        data.templates.find((template) => template.id === templateId)?.name ?? 'resume';
+      const res = await fetch(`${APP_BASE_PATH}/api/pdf`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ templateId }),
+      });
       if (!res.ok) {
         throw new Error('PDF generation failed');
       }
@@ -224,7 +213,7 @@ export default function EditorShell({ initialData, canEdit }: EditorShellProps) 
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = 'gad-badr-resume.pdf';
+      a.download = `${templateName.toLowerCase().replace(/[^a-z0-9]+/g, '-') || 'resume'}.pdf`;
       document.body.appendChild(a);
       a.click();
       a.remove();
@@ -235,7 +224,7 @@ export default function EditorShell({ initialData, canEdit }: EditorShellProps) 
     } finally {
       setPdfLoading(false);
     }
-  }, [pdfLoading]);
+  }, [activeTemplateId, data.templates, pdfLoading, workspaceMode]);
 
   const handleLogout = useCallback(async () => {
     setLogoutLoading(true);
@@ -257,16 +246,31 @@ export default function EditorShell({ initialData, canEdit }: EditorShellProps) 
 
   const savedAtLabel = formatSavedAt(lastSavedAt);
   const editEnabled = canEdit && isEditing;
+  const shellMaxWidth =
+    workspaceMode === 'templates'
+      ? 'min(100%, 1320px)'
+      : `calc(${PAGE_WIDTH_MM}mm + 8rem)`;
+
+  const handleActiveTemplateChange = useCallback(
+    (templateId: string) => {
+      setActiveTemplateId(templateId);
+      setData((current) => ({ ...current, activeTemplateId: templateId }));
+    },
+    []
+  );
 
   return (
     <EditModeContext.Provider
       value={{ isEditing: editEnabled, toggle: () => setIsEditing((value) => !value) }}
     >
       <div className="no-print sticky top-0 z-50 border-b border-gray-200 bg-white shadow-sm">
-        <div className="mx-auto flex items-center justify-between gap-3 px-6 py-2" style={{ maxWidth: 'calc(210mm + 2rem)' }}>
+        <div
+          className="mx-auto flex items-center justify-between gap-3 px-6 py-2"
+          style={{ maxWidth: `calc(${PAGE_WIDTH_MM}mm + 2rem)` }}
+        >
           <div>
             <span className="text-xs font-semibold uppercase tracking-wider text-gray-500">
-              Resume Editor
+              Engineer Gad Badr Resume
             </span>
             {savedAtLabel && (
               <p className="text-[11px] text-gray-400">Last saved {savedAtLabel}</p>
@@ -298,13 +302,40 @@ export default function EditorShell({ initialData, canEdit }: EditorShellProps) 
 
             {saveError && <span className="text-xs text-red-600">{saveError}</span>}
 
+            {canEdit && (
+              <div className="flex rounded border border-gray-200 p-0.5">
+                <button
+                  type="button"
+                  onClick={() => setWorkspaceMode('main')}
+                  className={`rounded px-2 py-1 text-xs ${
+                    workspaceMode === 'main' ? 'bg-gray-900 text-white' : 'text-gray-600'
+                  }`}
+                >
+                  Main
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setWorkspaceMode('templates')}
+                  className={`rounded px-2 py-1 text-xs ${
+                    workspaceMode === 'templates' ? 'bg-gray-900 text-white' : 'text-gray-600'
+                  }`}
+                >
+                  Templates
+                </button>
+              </div>
+            )}
+
             <button
               type="button"
               onClick={handleDownloadPDF}
               disabled={pdfLoading}
               className="flex items-center gap-1.5 rounded bg-gray-900 px-3 py-1.5 text-xs text-white transition-colors hover:bg-gray-700 disabled:opacity-50"
             >
-              {pdfLoading ? 'Generating...' : 'Download PDF'}
+              {pdfLoading
+                ? 'Generating...'
+                : workspaceMode === 'templates'
+                  ? 'Download Template PDF'
+                  : 'Download PDF'}
             </button>
 
             {canEdit ? (
@@ -343,64 +374,17 @@ export default function EditorShell({ initialData, canEdit }: EditorShellProps) 
         {editEnabled && <div className="h-0.5 w-full bg-[#8B0000]" />}
       </div>
 
-      <div className="mx-auto px-4 py-8" style={{ maxWidth: 'calc(210mm + 2rem)' }}>
-        <div className="relative bg-white shadow-xl" style={{ padding: '12mm', fontSize: '13px' }}>
-          <div ref={contentRef} className="relative">
-            <Header
-              data={data.personalInfo}
-              onChange={(personalInfo) => setData((current) => ({ ...current, personalInfo }))}
-            />
-
-            <div style={{ display: 'grid', gridTemplateColumns: '3fr 2fr', gap: '2rem', marginTop: 0 }}>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
-                <ExperienceSection
-                  items={data.experience as ExperienceEntry[]}
-                  onChange={(experience) => setData((current) => ({ ...current, experience }))}
-                />
-                <CertificatesSection
-                  items={data.certificates as CertEntry[]}
-                  onChange={(certificates) =>
-                    setData((current) => ({ ...current, certificates }))
-                  }
-                />
-              </div>
-
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '1.75rem' }}>
-                <EducationSection
-                  items={data.education as EducationEntry[]}
-                  onChange={(education) => setData((current) => ({ ...current, education }))}
-                />
-                <SkillsSection
-                  skills={data.skills}
-                  onChange={(skills) => setData((current) => ({ ...current, skills }))}
-                />
-                <AboutMeSection
-                  text={data.about}
-                  onChange={(about) => setData((current) => ({ ...current, about }))}
-                />
-              </div>
-            </div>
-
-            <div style={{ marginTop: '2rem' }}>
-              <ProjectsSection
-                items={data.projects as ProjectEntry[]}
-                onChange={(projects) => setData((current) => ({ ...current, projects }))}
-              />
-            </div>
-
-            {Array.from({ length: pageCount - 1 }, (_, i) => (
-              <div
-                key={i}
-                className="page-break-indicator"
-                style={{ top: `${(i + 1) * 273}mm` }}
-              >
-                <span className="page-break-label">
-                  Page {i + 1} ends · Page {i + 2} begins
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
+      <div className="mx-auto px-4 py-8" style={{ maxWidth: shellMaxWidth }}>
+        {workspaceMode === 'templates' && canEdit ? (
+          <TemplateEditor
+            data={data}
+            activeTemplateId={activeTemplateId}
+            onActiveTemplateChange={handleActiveTemplateChange}
+            onChange={setData}
+          />
+        ) : (
+          <OnlineResume data={data} onChange={setData} />
+        )}
 
         <p className="no-print mt-4 text-center text-xs text-gray-400">
           {canEdit

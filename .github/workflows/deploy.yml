@@ -1,0 +1,31 @@
+name: Deploy on push to master
+on:
+    push:
+        branches:
+            - master
+jobs:
+    deploy:
+        runs-on: ubuntu-latest
+        steps:
+            -   uses: actions/checkout@v4
+            -   name: Read deploy flag
+                id: flag
+                run: |
+                    VALUE=$(cat .deploy | tr -d '[:space:]')
+                    echo "deploy=$VALUE" >> $GITHUB_OUTPUT
+
+            -   name: Deploy to VPS via SSH
+                if: steps.flag.outputs.deploy == 'true'
+                uses: appleboy/ssh-action@v1.0.3
+                with:
+                    host: ${{ secrets.SERVER_IP }}
+                    username: ${{ secrets.SERVER_USER }}
+                    key: ${{ secrets.SERVER_SSH_KEY }}
+                    script: |
+                        export NVM_DIR="$HOME/.nvm"
+                        [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+                        cd /root/Gad/web/Apps/resume
+                        git fetch origin
+                        git reset --hard origin/master
+                        npm run build
+                        pm2 restart 13

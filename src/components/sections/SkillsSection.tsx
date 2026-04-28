@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import type { SkillEntry } from '@/types/resume';
 import { useEditMode } from '@/context/EditModeContext';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
@@ -67,8 +68,8 @@ function SkillChip({ id, label, isEditing, onRemove }: SkillChipProps) {
 }
 
 interface SkillsSectionProps {
-  skills: string[];
-  onChange: (skills: string[]) => void;
+  skills: SkillEntry[];
+  onChange: (skills: SkillEntry[]) => void;
 }
 
 export default function SkillsSection({ skills, onChange }: SkillsSectionProps) {
@@ -79,8 +80,7 @@ export default function SkillsSection({ skills, onChange }: SkillsSectionProps) 
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } })
   );
 
-  // Use the skill value as ID (they're deduplicated)
-  const skillIds = skills.map((s) => `skill-${s}`);
+  const skillIds = skills.map((skill) => skill.id);
 
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
@@ -94,8 +94,14 @@ export default function SkillsSection({ skills, onChange }: SkillsSectionProps) 
 
   const addSkill = (val: string) => {
     const trimmed = val.trim();
-    if (trimmed && !skills.includes(trimmed)) {
-      onChange([...skills, trimmed]);
+    if (trimmed && !skills.some((skill) => skill.label.toLowerCase() === trimmed.toLowerCase())) {
+      onChange([
+        ...skills,
+        {
+          id: `skill-${crypto.randomUUID()}`,
+          label: trimmed,
+        },
+      ]);
     }
     setInputVal('');
   };
@@ -118,12 +124,16 @@ export default function SkillsSection({ skills, onChange }: SkillsSectionProps) 
         onDragEnd={handleDragEnd}
       >
         <SortableContext items={skillIds} strategy={rectSortingStrategy}>
-          <div className="flex flex-wrap gap-1.5">
+          <div
+            className={`flex flex-wrap gap-1.5 ${
+              isEditing ? 'max-h-52 overflow-y-auto pr-2 content-start' : ''
+            }`}
+          >
             {skills.map((skill, i) => (
               <SkillChip
                 key={skillIds[i]}
                 id={skillIds[i]}
-                label={skill}
+                label={skill.label}
                 isEditing={isEditing}
                 onRemove={() => removeSkill(i)}
               />

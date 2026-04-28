@@ -57,12 +57,39 @@ export interface CertEntry {
   link?: string;
 }
 
+export interface SkillEntry {
+  id: string;
+  label: string;
+  category?: string;
+}
+
+export interface ResumeTemplateSelection {
+  experienceIds: string[];
+  experienceBulletIndexes?: Record<string, number[]>;
+  projectIds: string[];
+  projectBulletIndexes?: Record<string, number[]>;
+  skillIds: string[];
+  educationIds: string[];
+  certificateIds: string[];
+}
+
+export interface ResumeTemplate {
+  id: string;
+  name: string;
+  targetTitle?: string;
+  summaryOverride?: string;
+  hideContactInfo: boolean;
+  selected: ResumeTemplateSelection;
+}
+
 export interface ResumeData {
   personalInfo: PersonalInfo;
   about: string;
   experience: ExperienceEntry[];
   projects: ProjectEntry[];
-  skills: string[];
+  skills: SkillEntry[];
   education: EducationEntry[];
   certificates: CertEntry[];
+  templates: ResumeTemplate[];
+  activeTemplateId?: string;
 }

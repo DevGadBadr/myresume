@@ -9,6 +9,9 @@ import type {
   ProjectDeployment,
   ProjectEntry,
   ResumeData,
+  ResumeTemplate,
+  ResumeTemplateSelection,
+  SkillEntry,
 } from '@/types/resume';
 
 export class ResumeValidationError extends Error {
@@ -46,6 +49,27 @@ function readStringArray(value: unknown, path: string) {
   }
 
   return value.map((item, index) => readString(item, `${path}[${index}]`));
+}
+
+function slugifyId(value: string, fallback: string) {
+  const slug = value
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+
+  return slug || fallback;
+}
+
+function dedupeId(baseId: string, usedIds: Set<string>) {
+  let id = baseId;
+  let suffix = 2;
+  while (usedIds.has(id)) {
+    id = `${baseId}-${suffix}`;
+    suffix += 1;
+  }
+  usedIds.add(id);
+  return id;
 }
 
 function readContactLink(value: unknown, path: string): ContactLink {
@@ -156,10 +180,158 @@ function readCertificateEntry(value: unknown, path: string): CertEntry {
   return entry;
 }
 
-export function normalizeResumeData(value: unknown): ResumeData {
-  const record = readObject(value, 'resume');
+function readSkills(value: unknown): SkillEntry[] {
+  if (!Array.isArray(value)) {
+    throw new ResumeValidationError('skills must be an array');
+  }
+
+  const usedIds = new Set<string>();
+  return value.map((item, index) => {
+    if (typeof item === 'string') {
+      const label = readString(item, `skills[${index}]`);
+      return {
+        id: dedupeId(`skill-${slugifyId(label, String(index + 1))}`, usedIds),
+        label,
+      };
+    }
+
+    const record = readObject(item, `skills[${index}]`);
+    const label = readString(record.label, `skills[${index}].label`);
+    const id =
+      typeof record.id === 'string' && record.id.trim()
+        ? readString(record.id, `skills[${index}].id`)
+        : `skill-${slugifyId(label, String(index + 1))}`;
+
+    const skill: SkillEntry = {
+      id: dedupeId(id, usedIds),
+      label,
+    };
+
+    if (typeof record.category === 'string' && record.category.trim()) {
+      skill.category = record.category.trim();
+    }
+
+    return skill;
+  });
+}
+
+function readNumberArray(value: unknown, path: string) {
+  if (!Array.isArray(value)) {
+    throw new ResumeValidationError(`${path} must be an array`);
+  }
+
+  return value.map((item, index) => {
+    if (typeof item !== 'number' || !Number.isInteger(item) || item < 0) {
+      throw new ResumeValidationError(`${path}[${index}] must be a non-negative integer`);
+    }
+    return item;
+  });
+}
+
+function readBulletIndexMap(value: unknown, path: string) {
+  if (value === undefined) {
+    return undefined;
+  }
+
+  const record = readObject(value, path);
+  const result: Record<string, number[]> = {};
+
+  Object.entries(record).forEach(([id, indexes]) => {
+    result[id] = readNumberArray(indexes, `${path}.${id}`);
+  });
+
+  return result;
+}
+
+function readTemplateSelection(value: unknown, path: string): ResumeTemplateSelection {
+  const record = readObject(value, path);
 
   return {
+    experienceIds: readStringArray(record.experienceIds ?? [], `${path}.experienceIds`),
+    experienceBulletIndexes: readBulletIndexMap(
+      record.experienceBulletIndexes,
+      `${path}.experienceBulletIndexes`
+    ),
+    projectIds: readStringArray(record.projectIds ?? [], `${path}.projectIds`),
+    projectBulletIndexes: readBulletIndexMap(
+      record.projectBulletIndexes,
+      `${path}.projectBulletIndexes`
+    ),
+    skillIds: readStringArray(record.skillIds ?? [], `${path}.skillIds`),
+    educationIds: readStringArray(record.educationIds ?? [], `${path}.educationIds`),
+    certificateIds: readStringArray(record.certificateIds ?? [], `${path}.certificateIds`),
+  };
+}
+
+function readResumeTemplate(value: unknown, path: string): ResumeTemplate {
+  const record = readObject(value, path);
+  const template: ResumeTemplate = {
+    id: readString(record.id, `${path}.id`),
+    name: readString(record.name, `${path}.name`),
+    hideContactInfo:
+      typeof record.hideContactInfo === 'boolean' ? record.hideContactInfo : false,
+    selected: readTemplateSelection(record.selected ?? {}, `${path}.selected`),
+  };
+
+  if (typeof record.targetTitle === 'string' && record.targetTitle.trim()) {
+    template.targetTitle = record.targetTitle.trim();
+  }
+
+  if (typeof record.summaryOverride === 'string' && record.summaryOverride.trim()) {
+    template.summaryOverride = record.summaryOverride.trim();
+  }
+
+  return template;
+}
+
+function createDefaultTemplates(data: Omit<ResumeData, 'templates' | 'activeTemplateId'>) {
+  const allSelection: ResumeTemplateSelection = {
+    experienceIds: data.experience.map((item) => item.id),
+    projectIds: data.projects.map((item) => item.id),
+    skillIds: data.skills.map((item) => item.id),
+    educationIds: data.education.map((item) => item.id),
+    certificateIds: data.certificates.map((item) => item.id),
+  };
+
+  const upworkSkillLabels = new Set([
+    'Python',
+    'TypeScript',
+    'JavaScript',
+    'React',
+    'Node.js',
+    'NestJS',
+    'Selenium',
+    'Playwright',
+    'MongoDB',
+    'Docker',
+    'APIs',
+    'Web Development',
+  ]);
+
+  return [
+    {
+      id: 'default',
+      name: 'Default Resume',
+      hideContactInfo: false,
+      selected: allSelection,
+    },
+    {
+      id: 'upwork',
+      name: 'Upwork Resume',
+      hideContactInfo: true,
+      selected: {
+        ...allSelection,
+        skillIds: data.skills
+          .filter((skill) => upworkSkillLabels.has(skill.label))
+          .map((skill) => skill.id),
+      },
+    },
+  ];
+}
+
+export function normalizeResumeData(value: unknown): ResumeData {
+  const record = readObject(value, 'resume');
+  const data = {
     personalInfo: readPersonalInfo(record.personalInfo),
     about: readString(record.about, 'about'),
     experience: Array.isArray(record.experience)
@@ -172,7 +344,7 @@ export function normalizeResumeData(value: unknown): ResumeData {
       : (() => {
           throw new ResumeValidationError('projects must be an array');
         })(),
-    skills: readStringArray(record.skills, 'skills'),
+    skills: readSkills(record.skills),
     education: Array.isArray(record.education)
       ? record.education.map((item, index) => readEducationEntry(item, `education[${index}]`))
       : (() => {
@@ -185,6 +357,21 @@ export function normalizeResumeData(value: unknown): ResumeData {
       : (() => {
           throw new ResumeValidationError('certificates must be an array');
         })(),
+  };
+
+  const templates = Array.isArray(record.templates)
+    ? record.templates.map((item, index) => readResumeTemplate(item, `templates[${index}]`))
+    : createDefaultTemplates(data);
+
+  const activeTemplateId =
+    typeof record.activeTemplateId === 'string' && record.activeTemplateId.trim()
+      ? record.activeTemplateId.trim()
+      : templates[0]?.id;
+
+  return {
+    ...data,
+    templates: templates.length > 0 ? templates : createDefaultTemplates(data),
+    activeTemplateId,
   };
 }
 

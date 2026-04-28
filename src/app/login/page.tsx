@@ -2,7 +2,6 @@ import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import LoginForm from '@/components/LoginForm';
 import { isAuthenticated } from '@/lib/auth';
-import { APP_BASE_PATH } from '@/lib/config';
 
 export const dynamic = 'force-dynamic';
 

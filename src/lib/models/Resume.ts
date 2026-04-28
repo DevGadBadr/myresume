@@ -53,7 +53,13 @@ const ResumeSchema = new Schema<ResumeDocument>(
         },
       },
     ],
-    skills: [{ type: String, required: true }],
+    skills: [
+      {
+        id: { type: String, required: true },
+        label: { type: String, required: true },
+        category: { type: String, required: false },
+      },
+    ],
     education: [
       {
         id: { type: String, required: true },
@@ -70,6 +76,25 @@ const ResumeSchema = new Schema<ResumeDocument>(
         date: { type: String, required: true },
         hours: { type: String, required: false },
         link: { type: String, required: false },
+      },
+    ],
+    activeTemplateId: { type: String, required: false },
+    templates: [
+      {
+        id: { type: String, required: true },
+        name: { type: String, required: true },
+        targetTitle: { type: String, required: false },
+        summaryOverride: { type: String, required: false },
+        hideContactInfo: { type: Boolean, required: true, default: false },
+        selected: {
+          experienceIds: [{ type: String, required: true }],
+          experienceBulletIndexes: { type: Schema.Types.Mixed, required: false },
+          projectIds: [{ type: String, required: true }],
+          projectBulletIndexes: { type: Schema.Types.Mixed, required: false },
+          skillIds: [{ type: String, required: true }],
+          educationIds: [{ type: String, required: true }],
+          certificateIds: [{ type: String, required: true }],
+        },
       },
     ],
   },

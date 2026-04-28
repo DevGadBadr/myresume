@@ -2,8 +2,16 @@ export const dynamic = 'force-dynamic';
 
 import PrintContent from '@/components/PrintContent';
 import { getResumeData } from '@/lib/resume-store';
+import { deriveResumeForTemplate } from '@/lib/resume-template';
 
-export default async function PrintPage() {
+interface PrintPageProps {
+  searchParams?: Promise<{ template?: string }>;
+}
+
+export default async function PrintPage({ searchParams }: PrintPageProps) {
   const resumeData = await getResumeData();
-  return <PrintContent data={resumeData} />;
+  const params = searchParams ? await searchParams : {};
+  const derived = deriveResumeForTemplate(resumeData, params.template);
+
+  return <PrintContent data={derived.data} hideContactInfo={derived.hideContactInfo} />;
 }

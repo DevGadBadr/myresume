@@ -3,13 +3,19 @@
 @tailwind utilities;
 
 @layer base {
+  html,
+  body {
+    margin: 0;
+    padding: 0;
+  }
+
   * {
     box-sizing: border-box;
   }
 
   body {
     @apply bg-gray-100 text-gray-900;
-    font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+    font-family: var(--font-inter), "Segoe UI", "Helvetica Neue", Arial, sans-serif;
   }
 }
 
@@ -21,27 +27,9 @@
   }
 }
 
-/* Page break indicators */
-.page-break-indicator {
-  position: absolute;
-  left: -12mm;
-  right: -12mm;
-  height: 0;
-  z-index: 10;
-  pointer-events: none;
-  border-top: 2px dashed #cbd5e1;
-}
-
-.page-break-label {
-  position: absolute;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  background: #f1f5f9;
-  color: #64748b;
-  font-size: 11px;
-  padding: 1px 10px;
-  border-radius: 9999px;
-  white-space: nowrap;
+@page {
+  size: A4;
+  margin: 0;
 }
 
 /* Print styles */
@@ -50,16 +38,37 @@
     background: white !important;
   }
 
-  main {
+  .resume-pages-print {
+    width: 210mm;
+    margin: 0 auto;
+  }
+
+  .resume-page {
     background: white !important;
+    break-after: page;
+    break-inside: avoid;
+    page-break-after: always;
+    page-break-inside: avoid;
+  }
+
+  .resume-page:last-child {
+    break-after: auto;
+    page-break-after: auto;
+  }
+
+  .relative.group {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  h2,
+  h3,
+  .section-heading {
+    break-after: avoid;
+    page-break-after: avoid;
   }
 
   .no-print {
     display: none !important;
   }
-
-  .page-break-indicator {
-    display: none !important;
-  }
-
 }

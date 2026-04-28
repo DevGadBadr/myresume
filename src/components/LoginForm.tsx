@@ -1,11 +1,9 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { APP_BASE_PATH } from '@/lib/config';
 
 export default function LoginForm() {
-  const router = useRouter();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -28,8 +26,7 @@ export default function LoginForm() {
         throw new Error(payload?.error ?? 'Login failed');
       }
 
-      router.push('/');
-      router.refresh();
+      window.location.assign(APP_BASE_PATH || '/');
     } catch (submitError) {
       setError(submitError instanceof Error ? submitError.message : 'Login failed');
     } finally {

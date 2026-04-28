@@ -7,9 +7,10 @@ import EditableText from '@/components/EditableText';
 interface HeaderProps {
   data: PersonalInfo;
   onChange: (updated: PersonalInfo) => void;
+  hideContactInfo?: boolean;
 }
 
-export default function Header({ data, onChange }: HeaderProps) {
+export default function Header({ data, onChange, hideContactInfo = false }: HeaderProps) {
   const { isEditing } = useEditMode();
 
   const updateField = <K extends keyof PersonalInfo>(key: K, val: PersonalInfo[K]) =>
@@ -37,13 +38,13 @@ export default function Header({ data, onChange }: HeaderProps) {
     updateField('links', data.links.filter((_, idx) => idx !== i));
 
   return (
-    <header className="border-b-2 border-[#8B0000] pb-4 mb-6 print:pb-3 print:mb-4">
+    <header className="border-b-2 border-[#8B0000] pb-4 mb-6">
       {/* Name */}
       <EditableText
         value={data.name}
         onChange={(v) => updateField('name', v)}
         as="h1"
-        className="text-4xl font-black tracking-wide text-gray-900 leading-tight print:text-3xl"
+        className="text-4xl font-black tracking-wide text-gray-900 leading-tight"
       />
 
       {/* Title */}
@@ -55,6 +56,7 @@ export default function Header({ data, onChange }: HeaderProps) {
       />
 
       {/* Contact row */}
+      {!hideContactInfo && (
       <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-3 text-sm text-gray-600">
         {/* Email */}
         <span className="flex items-center gap-1">
@@ -155,6 +157,7 @@ export default function Header({ data, onChange }: HeaderProps) {
           </button>
         )}
       </div>
+      )}
     </header>
   );
 }

@@ -34,7 +34,12 @@ test('normalizeResumeData trims and preserves the expected shape', () => {
   });
 
   assert.equal(normalized.about, DEFAULT_RESUME_DATA.about);
-  assert.deepEqual(normalized.skills, ['TypeScript', 'React']);
+  assert.deepEqual(normalized.skills, [
+    { id: 'skill-typescript', label: 'TypeScript' },
+    { id: 'skill-react', label: 'React' },
+  ]);
+  assert.equal(normalized.templates[0].name, 'Default Resume');
+  assert.equal(normalized.templates[1].hideContactInfo, true);
   assert.deepEqual(normalized.projects[0].deployment, {
     url: 'https://demo.example.com/app',
     credentials: [
