@@ -5,9 +5,10 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import type { ResumeData } from '@/types/resume';
 import { EditModeContext } from '@/context/EditModeContext';
-import { APP_BASE_PATH, RESUME_DRAFT_STORAGE_KEY } from '@/lib/config';
+import { APP_BASE_PATH, RESUME_DRAFT_STORAGE_KEY, RESUME_THEME_STORAGE_KEY } from '@/lib/config';
 import { PAGE_WIDTH_MM } from '@/lib/page-layout';
 import { tryNormalizeResumeData } from '@/lib/resume-validation';
+import { DEFAULT_COLOR_THEME, normalizeColorTheme, type ColorTheme } from '@/lib/theme';
 import OnlineResume from '@/components/OnlineResume';
 import TemplateEditor from '@/components/TemplateEditor';
 import { DEFAULT_TEMPLATE_ID } from '@/lib/resume-template';
@@ -49,6 +50,7 @@ export default function EditorShell({ initialData, canEdit }: EditorShellProps) 
   const [pdfLoading, setPdfLoading] = useState(false);
   const [logoutLoading, setLogoutLoading] = useState(false);
   const [autosaveReady, setAutosaveReady] = useState(false);
+  const [theme, setTheme] = useState<ColorTheme>(DEFAULT_COLOR_THEME);
   const skipNextAutosaveRef = useRef(true);
   const abortControllerRef = useRef<AbortController | null>(null);
   const saveSequenceRef = useRef(0);
@@ -58,6 +60,16 @@ export default function EditorShell({ initialData, canEdit }: EditorShellProps) 
     setData(initialData);
     setActiveTemplateId(initialData.activeTemplateId ?? initialData.templates[0]?.id ?? DEFAULT_TEMPLATE_ID);
   }, [initialData]);
+
+  useEffect(() => {
+    const storedTheme = window.localStorage.getItem(RESUME_THEME_STORAGE_KEY);
+    setTheme(normalizeColorTheme(storedTheme));
+  }, []);
+
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme;
+    window.localStorage.setItem(RESUME_THEME_STORAGE_KEY, theme);
+  }, [theme]);
 
   useEffect(() => {
     if (!canEdit) {
@@ -199,7 +211,7 @@ export default function EditorShell({ initialData, canEdit }: EditorShellProps) 
       const res = await fetch(`${APP_BASE_PATH}/api/pdf`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ templateId }),
+        body: JSON.stringify({ templateId, theme }),
       });
       if (!res.ok) {
         throw new Error('PDF generation failed');
@@ -224,7 +236,7 @@ export default function EditorShell({ initialData, canEdit }: EditorShellProps) 
     } finally {
       setPdfLoading(false);
     }
-  }, [activeTemplateId, data.templates, pdfLoading, workspaceMode]);
+  }, [activeTemplateId, data.templates, pdfLoading, theme, workspaceMode]);
 
   const handleLogout = useCallback(async () => {
     setLogoutLoading(true);
@@ -263,17 +275,17 @@ export default function EditorShell({ initialData, canEdit }: EditorShellProps) 
     <EditModeContext.Provider
       value={{ isEditing: editEnabled, toggle: () => setIsEditing((value) => !value) }}
     >
-      <div className="no-print sticky top-0 z-50 border-b border-gray-200 bg-white shadow-sm">
+      <div className="no-print sticky top-0 z-50 border-b border-[var(--resume-border)] bg-[var(--resume-panel)] shadow-sm">
         <div
           className="mx-auto flex items-center justify-between gap-3 px-6 py-2"
           style={{ maxWidth: `calc(${PAGE_WIDTH_MM}mm + 2rem)` }}
         >
           <div>
-            <span className="text-xs font-semibold uppercase tracking-wider text-gray-500">
+            <span className="text-xs font-semibold uppercase tracking-wider text-[var(--resume-muted)]">
               Engineer Gad Badr Resume
             </span>
             {savedAtLabel && (
-              <p className="text-[11px] text-gray-400">Last saved {savedAtLabel}</p>
+              <p className="text-[11px] text-[var(--resume-subtle)]">Last saved {savedAtLabel}</p>
             )}
           </div>
 
@@ -303,12 +315,12 @@ export default function EditorShell({ initialData, canEdit }: EditorShellProps) 
             {saveError && <span className="text-xs text-red-600">{saveError}</span>}
 
             {canEdit && (
-              <div className="flex rounded border border-gray-200 p-0.5">
+              <div className="flex rounded border border-[var(--resume-border)] p-0.5">
                 <button
                   type="button"
                   onClick={() => setWorkspaceMode('main')}
                   className={`rounded px-2 py-1 text-xs ${
-                    workspaceMode === 'main' ? 'bg-gray-900 text-white' : 'text-gray-600'
+                    workspaceMode === 'main' ? 'bg-[var(--resume-text)] text-[var(--resume-paper)]' : 'text-[var(--resume-muted)]'
                   }`}
                 >
                   Main
@@ -317,7 +329,7 @@ export default function EditorShell({ initialData, canEdit }: EditorShellProps) 
                   type="button"
                   onClick={() => setWorkspaceMode('templates')}
                   className={`rounded px-2 py-1 text-xs ${
-                    workspaceMode === 'templates' ? 'bg-gray-900 text-white' : 'text-gray-600'
+                    workspaceMode === 'templates' ? 'bg-[var(--resume-text)] text-[var(--resume-paper)]' : 'text-[var(--resume-muted)]'
                   }`}
                 >
                   Templates
@@ -327,9 +339,18 @@ export default function EditorShell({ initialData, canEdit }: EditorShellProps) 
 
             <button
               type="button"
+              onClick={() => setTheme((current) => (current === 'dark' ? 'light' : 'dark'))}
+              className="rounded border border-[var(--resume-border)] px-3 py-1.5 text-xs text-[var(--resume-text)] transition-colors hover:bg-[var(--resume-hover)]"
+              aria-pressed={theme === 'dark'}
+            >
+              {theme === 'dark' ? 'Light theme' : 'Dark theme'}
+            </button>
+
+            <button
+              type="button"
               onClick={handleDownloadPDF}
               disabled={pdfLoading}
-              className="flex items-center gap-1.5 rounded bg-gray-900 px-3 py-1.5 text-xs text-white transition-colors hover:bg-gray-700 disabled:opacity-50"
+              className="flex items-center gap-1.5 rounded bg-[var(--resume-text)] px-3 py-1.5 text-xs text-[var(--resume-paper)] transition-colors hover:opacity-85 disabled:opacity-50"
             >
               {pdfLoading
                 ? 'Generating...'
@@ -355,7 +376,7 @@ export default function EditorShell({ initialData, canEdit }: EditorShellProps) 
                   type="button"
                   onClick={handleLogout}
                   disabled={logoutLoading}
-                  className="rounded border border-gray-300 px-3 py-1.5 text-xs text-gray-700 transition-colors hover:bg-gray-100 disabled:opacity-50"
+                  className="rounded border border-[var(--resume-border)] px-3 py-1.5 text-xs text-[var(--resume-text)] transition-colors hover:bg-[var(--resume-hover)] disabled:opacity-50"
                 >
                   {logoutLoading ? 'Signing out...' : 'Sign out'}
                 </button>
@@ -363,7 +384,7 @@ export default function EditorShell({ initialData, canEdit }: EditorShellProps) 
             ) : (
               <Link
                 href="/login"
-                className="rounded border border-gray-300 px-3 py-1.5 text-xs text-gray-700 transition-colors hover:bg-gray-100"
+                className="rounded border border-[var(--resume-border)] px-3 py-1.5 text-xs text-[var(--resume-text)] transition-colors hover:bg-[var(--resume-hover)]"
               >
                 Owner login
               </Link>
@@ -386,7 +407,7 @@ export default function EditorShell({ initialData, canEdit }: EditorShellProps) 
           <OnlineResume data={data} onChange={setData} />
         )}
 
-        <p className="no-print mt-4 text-center text-xs text-gray-400">
+        <p className="no-print mt-4 text-center text-xs text-[var(--resume-subtle)]">
           {canEdit
             ? 'Authenticated edits are auto-saved to MongoDB, with local draft recovery on failure.'
             : 'Read-only mode. Sign in as the owner to edit this resume.'}

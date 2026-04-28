@@ -3,6 +3,47 @@
 @tailwind utilities;
 
 @layer base {
+  :root,
+  [data-theme='light'] {
+    --resume-app-bg: #f3f4f6;
+    --resume-panel: #ffffff;
+    --resume-paper: #ffffff;
+    --resume-text: #111827;
+    --resume-muted: #4b5563;
+    --resume-subtle: #9ca3af;
+    --resume-border: #e5e7eb;
+    --resume-border-strong: #d1d5db;
+    --resume-hover: #f3f4f6;
+    --resume-soft: #fdf5f5;
+    --resume-accent: #8b0000;
+    --resume-accent-dark: #6b0000;
+    --resume-accent-soft: #8b000015;
+    --resume-accent-border: #8b000040;
+    --resume-danger-soft: #fee2e2;
+    --resume-danger: #ef4444;
+    color-scheme: light;
+  }
+
+  [data-theme='dark'] {
+    --resume-app-bg: #15171b;
+    --resume-panel: #20232a;
+    --resume-paper: #111318;
+    --resume-text: #f4f5f7;
+    --resume-muted: #c4c9d2;
+    --resume-subtle: #8d95a3;
+    --resume-border: #343a45;
+    --resume-border-strong: #4b5563;
+    --resume-hover: #2a2f38;
+    --resume-soft: #251b1f;
+    --resume-accent: #ff6b6b;
+    --resume-accent-dark: #ff8a8a;
+    --resume-accent-soft: #ff6b6b18;
+    --resume-accent-border: #ff6b6b55;
+    --resume-danger-soft: #3a1f25;
+    --resume-danger: #ff8080;
+    color-scheme: dark;
+  }
+
   html,
   body {
     margin: 0;
@@ -14,17 +55,151 @@
   }
 
   body {
-    @apply bg-gray-100 text-gray-900;
+    background: var(--resume-app-bg);
+    color: var(--resume-text);
     font-family: var(--font-inter), "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  }
+
+  input,
+  textarea,
+  select {
+    background-color: var(--resume-panel);
+    color: var(--resume-text);
+  }
+
+  input::placeholder,
+  textarea::placeholder {
+    color: var(--resume-subtle);
   }
 }
 
 @layer components {
   .section-heading {
-    @apply text-sm font-black uppercase tracking-widest text-gray-900;
-    @apply border-b-2 border-[#8B0000] pb-1 mb-3;
+    @apply text-sm font-black uppercase tracking-widest;
+    color: var(--resume-text);
+    border-bottom: 2px solid var(--resume-accent);
+    padding-bottom: 0.25rem;
+    margin-bottom: 0.75rem;
     letter-spacing: 0.15em;
   }
+}
+
+.bg-white {
+  background-color: var(--resume-panel);
+}
+
+.bg-gray-50,
+.bg-gray-50\/60,
+.bg-gray-100,
+.hover\:bg-gray-50:hover,
+.hover\:bg-gray-100:hover {
+  background-color: var(--resume-hover);
+}
+
+.text-gray-900,
+.text-gray-800 {
+  color: var(--resume-text);
+}
+
+.text-gray-700,
+.text-gray-600,
+.text-gray-500 {
+  color: var(--resume-muted);
+}
+
+.text-gray-400,
+.text-gray-300,
+.placeholder\:text-gray-300::placeholder {
+  color: var(--resume-subtle);
+}
+
+.border-gray-300 {
+  border-color: var(--resume-border-strong);
+}
+
+.border-gray-200,
+.border-gray-100 {
+  border-color: var(--resume-border);
+}
+
+.text-\[\#8B0000\] {
+  color: var(--resume-accent);
+}
+
+.border-\[\#8B0000\],
+.border-\[\#8B000040\],
+.border-\[\#8B000030\],
+.border-\[\#8B000020\] {
+  border-color: var(--resume-accent-border);
+}
+
+.bg-\[\#8B000008\],
+.bg-\[\#8B000010\],
+.bg-\[\#8B000015\],
+.hover\:bg-\[\#8B000025\]:hover {
+  background-color: var(--resume-accent-soft);
+}
+
+.bg-\[\#fdf5f5\] {
+  background-color: var(--resume-soft);
+}
+
+.hover\:bg-red-50:hover {
+  background-color: var(--resume-accent-soft);
+}
+
+.bg-red-100,
+.hover\:bg-red-200:hover {
+  background-color: var(--resume-danger-soft);
+}
+
+.bg-slate-100,
+.bg-yellow-100,
+.bg-green-100 {
+  background-color: var(--resume-hover);
+}
+
+.text-red-400,
+.text-red-500,
+.text-red-600,
+.text-red-700,
+.hover\:text-red-600:hover,
+.hover\:text-red-800:hover {
+  color: var(--resume-danger);
+}
+
+.text-slate-700,
+.text-yellow-700,
+.text-green-700 {
+  color: var(--resume-muted);
+}
+
+.border-red-200 {
+  border-color: var(--resume-danger);
+}
+
+.text-\[\#8B000050\] {
+  color: var(--resume-accent-border);
+}
+
+.placeholder\:\[\#8B000070\]::placeholder {
+  color: var(--resume-accent);
+}
+
+.focus\:border-\[\#8B000060\]:focus {
+  border-color: var(--resume-accent);
+}
+
+.border-\[\#8B0000\] {
+  border-color: var(--resume-accent);
+}
+
+.bg-\[\#8B0000\] {
+  background-color: var(--resume-accent);
+}
+
+.hover\:bg-\[\#6b0000\]:hover {
+  background-color: var(--resume-accent-dark);
 }
 
 @page {
@@ -35,7 +210,7 @@
 /* Print styles */
 @media print {
   body {
-    background: white !important;
+    background: var(--resume-app-bg) !important;
   }
 
   .resume-pages-print {
@@ -44,7 +219,6 @@
   }
 
   .resume-page {
-    background: white !important;
     break-after: page;
     break-inside: avoid;
     page-break-after: always;

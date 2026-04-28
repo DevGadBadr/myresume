@@ -99,6 +99,7 @@ export default function PaginatedResume({
           fontSize: '13px',
           pointerEvents: 'none',
           visibility: 'hidden',
+          color: 'var(--resume-text)',
         }}
       >
         <div ref={contentRef}>
@@ -113,7 +114,7 @@ export default function PaginatedResume({
         {Array.from({ length: pageCount }, (_, pageIndex) => (
           <div key={pageIndex}>
             <div
-              className={`resume-page mx-auto bg-white ${showShadow ? 'shadow-xl' : ''}`}
+              className={`resume-page mx-auto bg-[var(--resume-paper)] text-[var(--resume-text)] ${showShadow ? 'shadow-xl' : ''}`}
               style={{
                 width: `${PAGE_WIDTH_MM}mm`,
                 height: `${PAGE_TOTAL_MM}mm`,

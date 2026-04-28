@@ -10,7 +10,7 @@ interface OnlineResumeProps {
 
 export default function OnlineResume({ data, onChange }: OnlineResumeProps) {
   return (
-    <div className="rounded border border-gray-200 bg-white px-7 py-8 shadow-sm">
+    <div className="rounded border border-[var(--resume-border)] bg-[var(--resume-paper)] px-7 py-8 text-[var(--resume-text)] shadow-sm">
       <ResumeDocument data={data} onChange={onChange} />
     </div>
   );

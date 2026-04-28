@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import puppeteer from 'puppeteer';
 import { APP_BASE_PATH } from '@/lib/config';
+import { normalizeColorTheme } from '@/lib/theme';
 
 function getPrintOrigin(req: Request) {
   const requestUrl = new URL(req.url);
@@ -16,7 +17,10 @@ function getPrintOrigin(req: Request) {
 export async function POST(req: Request) {
   let browser = null;
   try {
-    const body = (await req.json().catch(() => null)) as { templateId?: string } | null;
+    const body = (await req.json().catch(() => null)) as
+      | { templateId?: string; theme?: string }
+      | null;
+    const theme = normalizeColorTheme(body?.theme);
     browser = await puppeteer.launch({
       args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage'],
       headless: true,
@@ -31,6 +35,7 @@ export async function POST(req: Request) {
     if (body?.templateId) {
       printUrl.searchParams.set('template', body.templateId);
     }
+    printUrl.searchParams.set('theme', theme);
 
     await page.goto(printUrl.toString(), {
       waitUntil: 'networkidle0',
