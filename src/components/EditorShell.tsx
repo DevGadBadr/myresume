@@ -5,11 +5,16 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import type { ResumeData } from '@/types/resume';
 import { EditModeContext } from '@/context/EditModeContext';
-import { APP_BASE_PATH, RESUME_DRAFT_STORAGE_KEY, RESUME_THEME_STORAGE_KEY } from '@/lib/config';
+import {
+  APP_BASE_PATH,
+  RESUME_DRAFT_STORAGE_KEY,
+  RESUME_GUIDES_STORAGE_KEY,
+  RESUME_THEME_STORAGE_KEY,
+} from '@/lib/config';
 import { PAGE_WIDTH_MM } from '@/lib/page-layout';
 import { tryNormalizeResumeData } from '@/lib/resume-validation';
 import { DEFAULT_COLOR_THEME, normalizeColorTheme, type ColorTheme } from '@/lib/theme';
-import OnlineResume from '@/components/OnlineResume';
+import PaginatedResume from '@/components/PaginatedResume';
 import TemplateEditor from '@/components/TemplateEditor';
 import { DEFAULT_TEMPLATE_ID } from '@/lib/resume-template';
 
@@ -51,6 +56,8 @@ export default function EditorShell({ initialData, canEdit }: EditorShellProps) 
   const [logoutLoading, setLogoutLoading] = useState(false);
   const [autosaveReady, setAutosaveReady] = useState(false);
   const [theme, setTheme] = useState<ColorTheme>(DEFAULT_COLOR_THEME);
+  const [showPageGuides, setShowPageGuides] = useState(false);
+  const [showSectionGuides, setShowSectionGuides] = useState(false);
   const skipNextAutosaveRef = useRef(true);
   const abortControllerRef = useRef<AbortController | null>(null);
   const saveSequenceRef = useRef(0);
@@ -64,12 +71,32 @@ export default function EditorShell({ initialData, canEdit }: EditorShellProps) 
   useEffect(() => {
     const storedTheme = window.localStorage.getItem(RESUME_THEME_STORAGE_KEY);
     setTheme(normalizeColorTheme(storedTheme));
+    try {
+      const storedGuides = window.localStorage.getItem(RESUME_GUIDES_STORAGE_KEY);
+      if (storedGuides) {
+        const parsed = JSON.parse(storedGuides) as {
+          page?: boolean;
+          section?: boolean;
+        };
+        setShowPageGuides(Boolean(parsed.page));
+        setShowSectionGuides(Boolean(parsed.section));
+      }
+    } catch {
+      // ignore invalid guide prefs
+    }
   }, []);
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
     window.localStorage.setItem(RESUME_THEME_STORAGE_KEY, theme);
   }, [theme]);
+
+  useEffect(() => {
+    window.localStorage.setItem(
+      RESUME_GUIDES_STORAGE_KEY,
+      JSON.stringify({ page: showPageGuides, section: showSectionGuides })
+    );
+  }, [showPageGuides, showSectionGuides]);
 
   useEffect(() => {
     if (!canEdit) {
@@ -359,6 +386,27 @@ export default function EditorShell({ initialData, canEdit }: EditorShellProps) 
                   : 'Download Default Template PDF'}
             </button>
 
+            {canEdit && editEnabled && (
+              <div className="hidden items-center gap-2 sm:flex">
+                <label className="flex items-center gap-1 text-[11px] text-[var(--resume-muted)]">
+                  <input
+                    type="checkbox"
+                    checked={showPageGuides}
+                    onChange={(event) => setShowPageGuides(event.target.checked)}
+                  />
+                  Page guides
+                </label>
+                <label className="flex items-center gap-1 text-[11px] text-[var(--resume-muted)]">
+                  <input
+                    type="checkbox"
+                    checked={showSectionGuides}
+                    onChange={(event) => setShowSectionGuides(event.target.checked)}
+                  />
+                  Section guides
+                </label>
+              </div>
+            )}
+
             {canEdit ? (
               <>
                 <button
@@ -402,9 +450,18 @@ export default function EditorShell({ initialData, canEdit }: EditorShellProps) 
             activeTemplateId={activeTemplateId}
             onActiveTemplateChange={handleActiveTemplateChange}
             onChange={setData}
+            showPageGuides={showPageGuides}
+            showSectionGuides={showSectionGuides}
           />
         ) : (
-          <OnlineResume data={data} onChange={setData} />
+          <PaginatedResume
+            data={data}
+            onChange={setData}
+            showPageGaps
+            showShadow
+            showPageGuides={showPageGuides}
+            showSectionGuides={showSectionGuides}
+          />
         )}
 
         <p className="no-print mt-4 text-center text-xs text-[var(--resume-subtle)]">

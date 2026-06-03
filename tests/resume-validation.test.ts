@@ -7,6 +7,7 @@ import {
   tryNormalizeResumeData,
 } from '../src/lib/resume-validation.ts';
 import { DEFAULT_RESUME_DATA } from '../src/lib/defaultData.ts';
+import { normalizeLayoutSettings } from '../src/lib/layout-settings.ts';
 
 process.env.AUTH_SECRET ??= 'test-secret';
 process.env.ADMIN_USERNAME ??= 'admin';
@@ -45,6 +46,8 @@ test('normalizeResumeData trims and preserves the expected shape', () => {
   assert.equal(normalized.templates[1].hideContactInfo, true);
   assert.ok(normalized.templates[1].content);
   assert.equal('selected' in normalized.templates[0], false);
+  assert.deepEqual(normalized.layout?.controls ?? [], []);
+  assert.ok(normalized.templates[0].content.layout);
   assert.deepEqual(normalized.projects[0].deployment, {
     url: 'https://demo.example.com/app',
     credentials: [
@@ -132,6 +135,30 @@ test('tryNormalizeResumeData rejects malformed payloads', () => {
   if (!result.ok) {
     assert.match(result.error, /projects must be an array/);
   }
+});
+
+test('normalizeResumeData normalizes layout controls', () => {
+  const normalized = normalizeResumeData({
+    ...DEFAULT_RESUME_DATA,
+    layout: {
+      controls: [
+        {
+          id: 'spacer-1',
+          type: 'spacer',
+          anchor: { kind: 'afterHeader' },
+          heightMm: 12,
+        },
+      ],
+      sections: {
+        experience: { minHeightMm: 20 },
+      },
+    },
+  });
+
+  assert.equal(normalized.layout?.controls.length, 1);
+  assert.equal(normalized.layout?.controls[0].heightMm, 12);
+  assert.equal(normalized.layout?.sections?.experience?.minHeightMm, 20);
+  assert.deepEqual(normalizeLayoutSettings(null).controls, []);
 });
 
 test('session tokens validate signature and expiry', () => {

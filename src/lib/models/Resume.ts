@@ -79,6 +79,17 @@ const ResumeSchema = new Schema<ResumeDocument>(
       },
     ],
     activeTemplateId: { type: String, required: false },
+    layout: {
+      controls: [
+        {
+          id: { type: String, required: true },
+          type: { type: String, enum: ['spacer', 'pageBreak'], required: true },
+          anchor: { type: Schema.Types.Mixed, required: true },
+          heightMm: { type: Number, required: false },
+        },
+      ],
+      sections: { type: Schema.Types.Mixed, required: false },
+    },
     templates: [
       {
         id: { type: String, required: true },
@@ -141,6 +152,17 @@ const ResumeSchema = new Schema<ResumeDocument>(
               link: { type: String, required: false },
             },
           ],
+          layout: {
+            controls: [
+              {
+                id: { type: String, required: true },
+                type: { type: String, enum: ['spacer', 'pageBreak'], required: true },
+                anchor: { type: Schema.Types.Mixed, required: true },
+                heightMm: { type: Number, required: false },
+              },
+            ],
+            sections: { type: Schema.Types.Mixed, required: false },
+          },
         },
       },
     ],

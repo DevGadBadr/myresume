@@ -4,3 +4,4 @@ export const AUTH_COOKIE_NAME = 'resume_session';
 export const AUTH_SESSION_TTL_SECONDS = 60 * 60 * 24 * 7;
 export const RESUME_DRAFT_STORAGE_KEY = 'resume-editor-draft';
 export const RESUME_THEME_STORAGE_KEY = 'resume-color-theme';
+export const RESUME_GUIDES_STORAGE_KEY = 'resume-layout-guides';

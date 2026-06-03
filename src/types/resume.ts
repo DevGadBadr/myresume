@@ -63,6 +63,43 @@ export interface SkillEntry {
   category?: string;
 }
 
+export type SectionKey =
+  | 'experience'
+  | 'projects'
+  | 'skills'
+  | 'education'
+  | 'certificates'
+  | 'about';
+
+export type LayoutAnchor =
+  | { kind: 'afterHeader' }
+  | { kind: 'beforeSection'; section: SectionKey }
+  | { kind: 'afterSection'; section: SectionKey }
+  | { kind: 'beforeEntry'; section: SectionKey; entryId: string }
+  | { kind: 'afterEntry'; section: SectionKey; entryId: string };
+
+export interface LayoutControl {
+  id: string;
+  type: 'spacer' | 'pageBreak';
+  anchor: LayoutAnchor;
+  heightMm?: number;
+}
+
+export interface SectionLayoutStyle {
+  minHeightMm?: number;
+  paddingBottomMm?: number;
+}
+
+export interface ResumeLayoutSettings {
+  controls: LayoutControl[];
+  sections?: Partial<Record<SectionKey, SectionLayoutStyle>>;
+}
+
+export const DEFAULT_LAYOUT_SETTINGS: ResumeLayoutSettings = {
+  controls: [],
+  sections: {},
+};
+
 export interface ResumeTemplateContent {
   about: string;
   experience: ExperienceEntry[];
@@ -70,6 +107,7 @@ export interface ResumeTemplateContent {
   skills: SkillEntry[];
   education: EducationEntry[];
   certificates: CertEntry[];
+  layout?: ResumeLayoutSettings;
 }
 
 export interface ResumeTemplate {
@@ -90,4 +128,5 @@ export interface ResumeData {
   certificates: CertEntry[];
   templates: ResumeTemplate[];
   activeTemplateId?: string;
+  layout?: ResumeLayoutSettings;
 }

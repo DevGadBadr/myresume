@@ -8,6 +8,7 @@ import type {
   ResumeTemplateContent,
   SkillEntry,
 } from '@/types/resume';
+import { cloneLayoutSettings } from '@/lib/layout-settings';
 
 /** Legacy shape stored before template-owned content migration. */
 export interface LegacyResumeTemplateSelection {
@@ -60,7 +61,7 @@ function cloneCertificate(entry: CertEntry): CertEntry {
 export function deepCloneContent(
   from: Pick<
     ResumeData,
-    'about' | 'experience' | 'projects' | 'skills' | 'education' | 'certificates'
+    'about' | 'experience' | 'projects' | 'skills' | 'education' | 'certificates' | 'layout'
   >
 ): ResumeTemplateContent {
   return {
@@ -70,6 +71,7 @@ export function deepCloneContent(
     skills: from.skills.map(cloneSkill),
     education: from.education.map(cloneEducation),
     certificates: from.certificates.map(cloneCertificate),
+    layout: cloneLayoutSettings(from.layout),
   };
 }
 
@@ -168,6 +170,7 @@ export function assembleTemplateResume(root: ResumeData, template: ResumeTemplat
     skills: content.skills,
     education: content.education,
     certificates: content.certificates,
+    layout: cloneLayoutSettings(content.layout),
     activeTemplateId: template.id,
   };
 }
@@ -186,5 +189,15 @@ export function importSectionFromMain(
   return {
     ...content,
     [section]: deepCloneContent(main)[section],
+  };
+}
+
+export function mergeResumeWithLayout(
+  data: ResumeData,
+  layout?: ResumeData['layout']
+): ResumeData {
+  return {
+    ...data,
+    layout: cloneLayoutSettings(layout ?? data.layout),
   };
 }

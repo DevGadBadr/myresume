@@ -24,6 +24,9 @@ import {
 interface ProjectsSectionProps {
   items: ProjectEntry[];
   onChange: (items: ProjectEntry[]) => void;
+  onlyEntryIds?: string[];
+  showHeading?: boolean;
+  showListActions?: boolean;
 }
 
 interface SortableProjectCardProps {
@@ -64,13 +67,23 @@ function SortableProjectCard({ id, isEditing, children }: SortableProjectCardPro
   );
 }
 
-export default function ProjectsSection({ items, onChange }: ProjectsSectionProps) {
+export default function ProjectsSection({
+  items,
+  onChange,
+  onlyEntryIds,
+  showHeading = true,
+  showListActions = true,
+}: ProjectsSectionProps) {
   const { isEditing } = useEditMode();
+
+  const visibleItems = onlyEntryIds
+    ? items.filter((item) => onlyEntryIds.includes(item.id))
+    : items;
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } })
   );
-  const projectIds = items.map((item) => item.id);
+  const projectIds = visibleItems.map((item) => item.id);
 
   const updateItem = (i: number, patch: Partial<ProjectEntry>) => {
     onChange(items.map((item, idx) => (idx === i ? { ...item, ...patch } : item)));
@@ -202,15 +215,16 @@ export default function ProjectsSection({ items, onChange }: ProjectsSectionProp
 
   return (
     <section>
-      <h2 className="section-heading">Projects</h2>
+      {showHeading && <h2 className="section-heading">Projects</h2>}
       <DndContext
         sensors={sensors}
         collisionDetection={closestCenter}
-        onDragEnd={handleProjectDragEnd}
+        onDragEnd={showListActions ? handleProjectDragEnd : () => {}}
       >
         <SortableContext items={projectIds} strategy={verticalListSortingStrategy}>
           <div className="space-y-5">
-            {items.map((item, i) => {
+            {visibleItems.map((item, i) => {
+              const sourceIndex = items.findIndex((entry) => entry.id === item.id);
               const bulletIds = item.bullets.map((_, bi) => `${item.id}-b-${bi}`);
               const deploymentCredentials = item.deployment?.credentials ?? [];
               const hasDeploymentDetails =
@@ -218,14 +232,14 @@ export default function ProjectsSection({ items, onChange }: ProjectsSectionProp
                 deploymentCredentials.length > 0;
 
               return (
-                <SortableProjectCard key={item.id} id={item.id} isEditing={isEditing}>
-                  {isEditing && (
+                <SortableProjectCard key={item.id} id={item.id} isEditing={isEditing && showListActions}>
+                  {isEditing && showListActions && (
                     <div className="mb-2 flex items-center justify-between gap-2">
                       <div className="flex items-center gap-2 text-[11px] text-gray-400">
                         <button
                           type="button"
-                          onClick={() => moveItem(i, i - 1)}
-                          disabled={i === 0}
+                          onClick={() => moveItem(sourceIndex, sourceIndex - 1)}
+                          disabled={sourceIndex === 0}
                           className="rounded border border-gray-200 px-2 py-0.5 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40"
                           aria-label={`Move project ${item.title} up`}
                           title="Move up"
@@ -234,8 +248,8 @@ export default function ProjectsSection({ items, onChange }: ProjectsSectionProp
                         </button>
                         <button
                           type="button"
-                          onClick={() => moveItem(i, i + 1)}
-                          disabled={i === items.length - 1}
+                          onClick={() => moveItem(sourceIndex, sourceIndex + 1)}
+                          disabled={sourceIndex === items.length - 1}
                           className="rounded border border-gray-200 px-2 py-0.5 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40"
                           aria-label={`Move project ${item.title} down`}
                           title="Move down"
@@ -244,7 +258,7 @@ export default function ProjectsSection({ items, onChange }: ProjectsSectionProp
                         </button>
                       </div>
                       <button
-                        onClick={() => removeItem(i)}
+                        onClick={() => removeItem(sourceIndex)}
                         aria-label={`Remove project ${item.title}`}
                         className="z-10 flex h-6 w-6 items-center justify-center rounded-full bg-red-100 text-xs text-red-500 opacity-0 transition-opacity hover:bg-red-200 group-hover:opacity-100"
                         title="Remove project"
@@ -258,7 +272,7 @@ export default function ProjectsSection({ items, onChange }: ProjectsSectionProp
                     <div className="flex items-baseline gap-1.5">
                       <EditableText
                         value={item.title}
-                        onChange={(v) => updateItem(i, { title: v })}
+                        onChange={(v) => updateItem(sourceIndex, { title: v })}
                         as="h3"
                         className="font-semibold text-gray-900 text-sm"
                       />
@@ -266,7 +280,7 @@ export default function ProjectsSection({ items, onChange }: ProjectsSectionProp
 
                     <EditableText
                       value={item.description}
-                      onChange={(v) => updateItem(i, { description: v })}
+                      onChange={(v) => updateItem(sourceIndex, { description: v })}
                       as="p"
                       className="text-xs text-[#8B0000] font-medium mt-0.5"
                     />
@@ -282,12 +296,12 @@ export default function ProjectsSection({ items, onChange }: ProjectsSectionProp
                               <input
                                 type="text"
                                 value={tag}
-                                onChange={(e) => updateTag(i, ti, e.target.value)}
+                                onChange={(e) => updateTag(sourceIndex, ti, e.target.value)}
                                 className="bg-transparent outline-none w-16 text-xs text-[#8B0000]"
                                 style={{ fontFamily: 'inherit' }}
                               />
                               <button
-                                onClick={() => removeTag(i, ti)}
+                                onClick={() => removeTag(sourceIndex, ti)}
                                 aria-label={`Remove tag ${tag}`}
                                 className="text-red-400 hover:text-red-600 text-xs"
                               >
@@ -301,7 +315,7 @@ export default function ProjectsSection({ items, onChange }: ProjectsSectionProp
                       ))}
                       {isEditing && (
                         <button
-                          onClick={() => addTag(i)}
+                          onClick={() => addTag(sourceIndex)}
                           className="px-2 py-0.5 rounded text-xs border border-dashed border-[#8B0000] text-[#8B0000] hover:bg-red-50"
                         >
                           + Tag
@@ -312,7 +326,7 @@ export default function ProjectsSection({ items, onChange }: ProjectsSectionProp
                     <DndContext
                       sensors={sensors}
                       collisionDetection={closestCenter}
-                      onDragEnd={(e) => handleBulletDragEnd(i, e)}
+                      onDragEnd={(e) => handleBulletDragEnd(sourceIndex, e)}
                     >
                       <SortableContext items={bulletIds} strategy={verticalListSortingStrategy}>
                         <ul className="mt-2 space-y-1 pl-3">
@@ -322,8 +336,8 @@ export default function ProjectsSection({ items, onChange }: ProjectsSectionProp
                               id={bulletIds[bi]}
                               value={bullet}
                               isEditing={isEditing}
-                              onChange={(v) => updateBullet(i, bi, v)}
-                              onRemove={() => removeBullet(i, bi)}
+                              onChange={(v) => updateBullet(sourceIndex, bi, v)}
+                              onRemove={() => removeBullet(sourceIndex, bi)}
                             />
                           ))}
                         </ul>
@@ -332,7 +346,7 @@ export default function ProjectsSection({ items, onChange }: ProjectsSectionProp
 
                     {isEditing && (
                       <button
-                        onClick={() => addBullet(i)}
+                        onClick={() => addBullet(sourceIndex)}
                         className="mt-1.5 ml-4 text-xs text-[#8B0000] hover:underline"
                       >
                         + Add bullet
@@ -359,10 +373,10 @@ export default function ProjectsSection({ items, onChange }: ProjectsSectionProp
                               placeholder="https://your-app-demo.com"
                               value={item.deployment?.url ?? ''}
                               onChange={(e) =>
-                                updateDeployment(i, { url: e.target.value })
+                                updateDeployment(sourceIndex, { url: e.target.value })
                               }
                               onBlur={(e) =>
-                                updateDeployment(i, { url: e.currentTarget.value.trim() })
+                                updateDeployment(sourceIndex, { url: e.currentTarget.value.trim() })
                               }
                               className="w-full rounded border border-dashed border-[#8B000030] px-2 py-1 text-xs text-gray-600 outline-none placeholder:text-gray-300 focus:border-[#8B000060]"
                             />
@@ -378,12 +392,12 @@ export default function ProjectsSection({ items, onChange }: ProjectsSectionProp
                                     placeholder="Field name"
                                     value={credential.label}
                                     onChange={(e) =>
-                                      updateDeploymentCredential(i, credentialIdx, {
+                                      updateDeploymentCredential(sourceIndex, credentialIdx, {
                                         label: e.target.value,
                                       })
                                     }
                                     onBlur={(e) =>
-                                      updateDeploymentCredential(i, credentialIdx, {
+                                      updateDeploymentCredential(sourceIndex, credentialIdx, {
                                         label: e.currentTarget.value.trim(),
                                       })
                                     }
@@ -394,12 +408,12 @@ export default function ProjectsSection({ items, onChange }: ProjectsSectionProp
                                     placeholder="Value"
                                     value={credential.value}
                                     onChange={(e) =>
-                                      updateDeploymentCredential(i, credentialIdx, {
+                                      updateDeploymentCredential(sourceIndex, credentialIdx, {
                                         value: e.target.value,
                                       })
                                     }
                                     onBlur={(e) =>
-                                      updateDeploymentCredential(i, credentialIdx, {
+                                      updateDeploymentCredential(sourceIndex, credentialIdx, {
                                         value: e.currentTarget.value.trim(),
                                       })
                                     }
@@ -407,7 +421,7 @@ export default function ProjectsSection({ items, onChange }: ProjectsSectionProp
                                   />
                                   <button
                                     type="button"
-                                    onClick={() => removeDeploymentCredential(i, credentialIdx)}
+                                    onClick={() => removeDeploymentCredential(sourceIndex, credentialIdx)}
                                     className="rounded border border-red-200 px-2 py-1 text-xs text-red-500 transition-colors hover:bg-red-50"
                                     aria-label={`Remove credential ${credential.label || credentialIdx + 1}`}
                                     title="Remove credential"
@@ -419,7 +433,7 @@ export default function ProjectsSection({ items, onChange }: ProjectsSectionProp
 
                               <button
                                 type="button"
-                                onClick={() => addDeploymentCredential(i)}
+                                onClick={() => addDeploymentCredential(sourceIndex)}
                                 className="rounded border border-dashed border-[#8B000040] px-2 py-1 text-xs text-[#8B0000] transition-colors hover:bg-red-50"
                               >
                                 + Add credential field
@@ -465,7 +479,7 @@ export default function ProjectsSection({ items, onChange }: ProjectsSectionProp
                     )}
                   </div>
 
-                  {i < items.length - 1 && <hr className="mt-4 border-dashed border-gray-200" />}
+                  {i < visibleItems.length - 1 && <hr className="mt-4 border-dashed border-gray-200" />}
                 </SortableProjectCard>
               );
             })}
@@ -473,7 +487,7 @@ export default function ProjectsSection({ items, onChange }: ProjectsSectionProp
         </SortableContext>
       </DndContext>
 
-      {isEditing && (
+      {isEditing && showListActions && (
         <button
           onClick={addItem}
           className="mt-4 w-full text-sm text-[#8B0000] border border-dashed border-[#8B0000] rounded py-1.5 hover:bg-red-50 transition-colors"

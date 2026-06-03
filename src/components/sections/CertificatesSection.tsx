@@ -23,6 +23,9 @@ import {
 interface CertificatesSectionProps {
   items: CertEntry[];
   onChange: (items: CertEntry[]) => void;
+  onlyEntryIds?: string[];
+  showHeading?: boolean;
+  showListActions?: boolean;
 }
 
 interface SortableCertCardProps {
@@ -63,13 +66,23 @@ function SortableCertCard({ id, isEditing, children }: SortableCertCardProps) {
   );
 }
 
-export default function CertificatesSection({ items, onChange }: CertificatesSectionProps) {
+export default function CertificatesSection({
+  items,
+  onChange,
+  onlyEntryIds,
+  showHeading = true,
+  showListActions = true,
+}: CertificatesSectionProps) {
   const { isEditing } = useEditMode();
+
+  const visibleItems = onlyEntryIds
+    ? items.filter((item) => onlyEntryIds.includes(item.id))
+    : items;
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } })
   );
-  const certIds = items.map((item) => item.id);
+  const certIds = visibleItems.map((item) => item.id);
 
   const updateItem = (i: number, patch: Partial<CertEntry>) => {
     const updated = { ...items[i], ...patch };
@@ -108,23 +121,25 @@ export default function CertificatesSection({ items, onChange }: CertificatesSec
 
   return (
     <section>
-      <h2 className="section-heading">Certificates</h2>
+      {showHeading && <h2 className="section-heading">Certificates</h2>}
       <DndContext
         sensors={sensors}
         collisionDetection={closestCenter}
-        onDragEnd={handleDragEnd}
+        onDragEnd={showListActions ? handleDragEnd : () => {}}
       >
         <SortableContext items={certIds} strategy={verticalListSortingStrategy}>
           <div className="space-y-3">
-            {items.map((item, i) => (
-              <SortableCertCard key={item.id} id={item.id} isEditing={isEditing}>
-                {isEditing && (
+            {visibleItems.map((item, i) => {
+              const sourceIndex = items.findIndex((entry) => entry.id === item.id);
+              return (
+              <SortableCertCard key={item.id} id={item.id} isEditing={isEditing && showListActions}>
+                {isEditing && showListActions && (
                   <div className="mb-1 flex items-center justify-between gap-2">
                     <div className="flex items-center gap-2 text-[11px] text-gray-400">
                       <button
                         type="button"
-                        onClick={() => moveItem(i, i - 1)}
-                        disabled={i === 0}
+                        onClick={() => moveItem(sourceIndex, sourceIndex - 1)}
+                        disabled={sourceIndex === 0}
                         className="rounded border border-gray-200 px-2 py-0.5 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40"
                         aria-label={`Move certificate ${item.title} up`}
                         title="Move up"
@@ -133,8 +148,8 @@ export default function CertificatesSection({ items, onChange }: CertificatesSec
                       </button>
                       <button
                         type="button"
-                        onClick={() => moveItem(i, i + 1)}
-                        disabled={i === items.length - 1}
+                        onClick={() => moveItem(sourceIndex, sourceIndex + 1)}
+                        disabled={sourceIndex === items.length - 1}
                         className="rounded border border-gray-200 px-2 py-0.5 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40"
                         aria-label={`Move certificate ${item.title} down`}
                         title="Move down"
@@ -143,7 +158,7 @@ export default function CertificatesSection({ items, onChange }: CertificatesSec
                       </button>
                     </div>
                     <button
-                      onClick={() => removeItem(i)}
+                      onClick={() => removeItem(sourceIndex)}
                       aria-label={`Remove certificate ${item.title}`}
                       className="z-10 flex h-6 w-6 items-center justify-center rounded-full bg-red-100 text-xs text-red-500 opacity-0 transition-opacity hover:bg-red-200 group-hover:opacity-100"
                       title="Remove certificate"
@@ -155,14 +170,14 @@ export default function CertificatesSection({ items, onChange }: CertificatesSec
 
                 <EditableText
                   value={item.title}
-                  onChange={(v) => updateItem(i, { title: v })}
+                  onChange={(v) => updateItem(sourceIndex, { title: v })}
                   as="h3"
                   className="font-semibold text-gray-900 text-sm"
                 />
 
                 <EditableText
                   value={item.issuer}
-                  onChange={(v) => updateItem(i, { issuer: v })}
+                  onChange={(v) => updateItem(sourceIndex, { issuer: v })}
                   as="p"
                   className="text-xs text-[#8B0000] font-medium"
                 />
@@ -170,7 +185,7 @@ export default function CertificatesSection({ items, onChange }: CertificatesSec
                 <div className="flex items-center gap-1.5 mt-0.5">
                   <EditableText
                     value={item.date}
-                    onChange={(v) => updateItem(i, { date: v })}
+                    onChange={(v) => updateItem(sourceIndex, { date: v })}
                     as="p"
                     className="text-xs text-gray-500"
                   />
@@ -197,29 +212,30 @@ export default function CertificatesSection({ items, onChange }: CertificatesSec
                       type="text"
                       placeholder="Hours (e.g., 40 Hours)"
                       value={item.hours ?? ''}
-                      onChange={(e) => updateItem(i, { hours: e.target.value })}
-                      onBlur={(e) => updateItem(i, { hours: e.currentTarget.value.trim() })}
+                      onChange={(e) => updateItem(sourceIndex, { hours: e.target.value })}
+                      onBlur={(e) => updateItem(sourceIndex, { hours: e.currentTarget.value.trim() })}
                       className="flex-1 rounded border border-dashed border-[#8B000030] px-2 py-1 text-xs text-gray-600 outline-none placeholder:text-gray-300 focus:border-[#8B000060]"
                     />
                     <input
                       type="url"
                       placeholder="Certificate URL"
                       value={item.link ?? ''}
-                      onChange={(e) => updateItem(i, { link: e.target.value })}
-                      onBlur={(e) => updateItem(i, { link: e.currentTarget.value.trim() })}
+                      onChange={(e) => updateItem(sourceIndex, { link: e.target.value })}
+                      onBlur={(e) => updateItem(sourceIndex, { link: e.currentTarget.value.trim() })}
                       className="flex-1 rounded border border-dashed border-[#8B000030] px-2 py-1 text-xs text-gray-600 outline-none placeholder:text-gray-300 focus:border-[#8B000060]"
                     />
                   </div>
                 )}
 
-                {i < items.length - 1 && <hr className="mt-3 border-dashed border-gray-200" />}
+                {i < visibleItems.length - 1 && <hr className="mt-3 border-dashed border-gray-200" />}
               </SortableCertCard>
-            ))}
+              );
+            })}
           </div>
         </SortableContext>
       </DndContext>
 
-      {isEditing && (
+      {isEditing && showListActions && (
         <button
           onClick={addItem}
           className="mt-3 w-full text-sm text-[#8B0000] border border-dashed border-[#8B0000] rounded py-1.5 hover:bg-red-50 transition-colors"

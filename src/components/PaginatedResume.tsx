@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { ResumeData } from '@/types/resume';
 import {
   PAGE_CONTENT_MM,
@@ -8,12 +8,14 @@ import {
   PAGE_TOTAL_MM,
   PAGE_WIDTH_MM,
 } from '@/lib/page-layout';
-import ResumeDocument from '@/components/ResumeDocument';
+import { buildBlockStream, type ResumeBlock } from '@/lib/resume-blocks';
+import { packResumeIntoPages, type PageAssignment } from '@/lib/page-packer';
+import { normalizeLayoutSettings } from '@/lib/layout-settings';
+import ResumeBlockDocument from '@/components/ResumeBlockDocument';
+import CoverPageLayout from '@/components/CoverPageLayout';
+import ContinuationPageLayout from '@/components/ContinuationPageLayout';
 
-const MM_TO_PX = 96 / 25.4;
-const PAGE_CONTENT_PX = PAGE_CONTENT_MM * MM_TO_PX;
 const PAGE_GAP_PX = 40;
-const PAGE_OVERFLOW_TOLERANCE_PX = 1;
 
 interface PaginatedResumeProps {
   data: ResumeData;
@@ -22,6 +24,8 @@ interface PaginatedResumeProps {
   showShadow?: boolean;
   printMode?: boolean;
   hideContactInfo?: boolean;
+  showPageGuides?: boolean;
+  showSectionGuides?: boolean;
 }
 
 export default function PaginatedResume({
@@ -31,30 +35,51 @@ export default function PaginatedResume({
   showShadow = false,
   printMode = false,
   hideContactInfo = false,
+  showPageGuides = false,
+  showSectionGuides = false,
 }: PaginatedResumeProps) {
-  const contentRef = useRef<HTMLDivElement>(null);
-  const [pageCount, setPageCount] = useState(1);
+  const measureRef = useRef<HTMLDivElement>(null);
+  const [pages, setPages] = useState<PageAssignment[]>([]);
   const [isReady, setIsReady] = useState(false);
 
-  useEffect(() => {
-    const el = contentRef.current;
-    if (!el) {
+  const layout = normalizeLayoutSettings(data.layout);
+  const blocks = useMemo(() => buildBlockStream(data, layout), [data, layout]);
+  const blocksById = useMemo(
+    () => new Map(blocks.map((block) => [block.id, block])),
+    [blocks]
+  );
+
+  const measureAndPack = useCallback(() => {
+    const root = measureRef.current;
+    if (!root) {
       return;
     }
 
-    const update = () => {
-      const height = el.scrollHeight;
-      // Ignore sub-pixel overflow so integer scrollHeight rounding does not add a blank page.
-      const adjustedHeight = Math.max(0, height - PAGE_OVERFLOW_TOLERANCE_PX);
-      setPageCount(Math.max(1, Math.ceil(adjustedHeight / PAGE_CONTENT_PX)));
-    };
+    const heights = new Map<string, number>();
+    root.querySelectorAll<HTMLElement>('[data-resume-block-id]').forEach((element) => {
+      const id = element.dataset.resumeBlockId;
+      if (!id) {
+        return;
+      }
+      heights.set(id, element.offsetHeight);
+    });
 
-    update();
+    setPages(packResumeIntoPages(data, heights, layout));
+  }, [data, layout]);
 
-    const observer = new ResizeObserver(update);
-    observer.observe(el);
+  useEffect(() => {
+    measureAndPack();
+    const root = measureRef.current;
+    if (!root) {
+      return;
+    }
+
+    const observer = new ResizeObserver(() => {
+      measureAndPack();
+    });
+    observer.observe(root);
     return () => observer.disconnect();
-  }, [data]);
+  }, [measureAndPack]);
 
   useEffect(() => {
     if (!printMode) {
@@ -68,6 +93,8 @@ export default function PaginatedResume({
     const waitForLayout = async () => {
       await document.fonts.ready;
       await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+      await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+      measureAndPack();
       await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
 
       if (cancelled) {
@@ -84,12 +111,39 @@ export default function PaginatedResume({
       cancelled = true;
       document.body.dataset.printReady = 'false';
     };
-  }, [data, pageCount, printMode]);
+  }, [data, pages.length, printMode, measureAndPack]);
+
+  const handleSpacerResize = useCallback(
+    (controlId: string, heightMm: number) => {
+      if (!onChange) return;
+      onChange((current) => {
+        const currentLayout = normalizeLayoutSettings(current.layout);
+        return {
+          ...current,
+          layout: {
+            ...currentLayout,
+            controls: currentLayout.controls.map((control) =>
+              control.id === controlId ? { ...control, heightMm } : control
+            ),
+          },
+        };
+      });
+    },
+    [onChange]
+  );
+
+  const guideClass = [
+    showPageGuides ? 'show-page-guides' : '',
+    showSectionGuides ? 'show-section-guides' : '',
+  ]
+    .filter(Boolean)
+    .join(' ');
 
   return (
     <>
       <div
         aria-hidden="true"
+        ref={measureRef}
         style={{
           position: 'fixed',
           left: '-9999px',
@@ -102,40 +156,67 @@ export default function PaginatedResume({
           color: 'var(--resume-text)',
         }}
       >
-        <div ref={contentRef}>
-          <ResumeDocument data={data} onChange={onChange} hideContactInfo={hideContactInfo} />
-        </div>
+        <ResumeBlockDocument
+          data={data}
+          onChange={onChange}
+          hideContactInfo={hideContactInfo}
+          onSpacerResize={handleSpacerResize}
+        />
       </div>
 
       <div
-        className={printMode ? 'resume-pages-print' : 'resume-pages-preview'}
+        className={`${printMode ? 'resume-pages-print' : 'resume-pages-preview'} ${guideClass}`.trim()}
         data-print-ready={printMode ? String(isReady) : undefined}
       >
-        {Array.from({ length: pageCount }, (_, pageIndex) => (
-          <div key={pageIndex}>
+        {pages.map((page, pageIndex) => (
+          <div key={`page-${pageIndex}`}>
             <div
-              className={`resume-page mx-auto bg-[var(--resume-paper)] text-[var(--resume-text)] ${showShadow ? 'shadow-xl' : ''}`}
+              className={`resume-page resume-page-shell mx-auto bg-[var(--resume-paper)] text-[var(--resume-text)] ${showShadow ? 'shadow-xl' : ''}`}
               style={{
                 width: `${PAGE_WIDTH_MM}mm`,
                 height: `${PAGE_TOTAL_MM}mm`,
                 padding: `${PAGE_MARGIN_MM}mm`,
                 fontSize: '13px',
                 overflow: 'hidden',
+                position: 'relative',
               }}
             >
-              <div style={{ height: `${PAGE_CONTENT_MM}mm`, overflow: 'hidden' }}>
-                <div style={{ transform: `translateY(-${pageIndex * PAGE_CONTENT_MM}mm)` }}>
-                  <ResumeDocument data={data} onChange={onChange} hideContactInfo={hideContactInfo} />
-                </div>
+              <div
+                className="resume-page-content"
+                style={{
+                  height: `${PAGE_CONTENT_MM}mm`,
+                  overflow: 'hidden',
+                  position: 'relative',
+                }}
+              >
+                {page.layout === 'cover' && page.cover ? (
+                  <CoverPageLayout
+                    data={data}
+                    cover={page.cover}
+                    blocksById={blocksById}
+                    onChange={onChange}
+                    hideContactInfo={hideContactInfo}
+                    onSpacerResize={handleSpacerResize}
+                  />
+                ) : (
+                  <ContinuationPageLayout
+                    data={data}
+                    blockIds={page.blockIds}
+                    blocksById={blocksById}
+                    onChange={onChange}
+                    hideContactInfo={hideContactInfo}
+                    onSpacerResize={handleSpacerResize}
+                  />
+                )}
               </div>
             </div>
-            {showPageGaps && pageIndex < pageCount - 1 && (
+            {showPageGaps && pageIndex < pages.length - 1 && (
               <div
                 className="no-print flex items-center justify-center"
                 style={{ height: `${PAGE_GAP_PX}px` }}
               >
                 <span className="text-xs text-gray-400">
-                  Page {pageIndex + 1} of {pageCount}
+                  Page {pageIndex + 1} of {pages.length}
                 </span>
               </div>
             )}

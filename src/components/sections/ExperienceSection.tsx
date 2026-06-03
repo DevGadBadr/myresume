@@ -21,9 +21,18 @@ import {
 interface ExperienceSectionProps {
   items: ExperienceEntry[];
   onChange: (items: ExperienceEntry[]) => void;
+  onlyEntryIds?: string[];
+  showHeading?: boolean;
+  showListActions?: boolean;
 }
 
-export default function ExperienceSection({ items, onChange }: ExperienceSectionProps) {
+export default function ExperienceSection({
+  items,
+  onChange,
+  onlyEntryIds,
+  showHeading = true,
+  showListActions = true,
+}: ExperienceSectionProps) {
   const { isEditing } = useEditMode();
 
   const sensors = useSensors(
@@ -75,17 +84,22 @@ export default function ExperienceSection({ items, onChange }: ExperienceSection
 
   const removeItem = (i: number) => onChange(items.filter((_, idx) => idx !== i));
 
+  const visibleItems = onlyEntryIds
+    ? items.filter((item) => onlyEntryIds.includes(item.id))
+    : items;
+
   return (
     <section>
-      <h2 className="section-heading">Experience</h2>
+      {showHeading && <h2 className="section-heading">Experience</h2>}
       <div className="space-y-5">
-        {items.map((item, i) => {
+        {visibleItems.map((item, i) => {
+          const sourceIndex = items.findIndex((entry) => entry.id === item.id);
           const bulletIds = item.bullets.map((_, bi) => `${item.id}-b-${bi}`);
           return (
             <div key={item.id} className="relative group">
-              {isEditing && (
+              {isEditing && showListActions && (
                 <button
-                  onClick={() => removeItem(i)}
+                  onClick={() => removeItem(sourceIndex)}
                   aria-label={`Remove experience ${item.role}`}
                   className="absolute -right-1 -top-1 z-10 w-6 h-6 flex items-center justify-center bg-red-100 text-red-500 rounded-full text-xs opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-200"
                   title="Remove entry"
@@ -98,13 +112,13 @@ export default function ExperienceSection({ items, onChange }: ExperienceSection
                 <div className="flex-1">
                   <EditableText
                     value={item.role}
-                    onChange={(v) => updateItem(i, { role: v })}
+                    onChange={(v) => updateItem(sourceIndex, { role: v })}
                     as="h3"
                     className="font-semibold text-gray-900 text-sm"
                   />
                   <EditableText
                     value={item.roleSubtitle}
-                    onChange={(v) => updateItem(i, { roleSubtitle: v })}
+                    onChange={(v) => updateItem(sourceIndex, { roleSubtitle: v })}
                     as="p"
                     className="text-xs text-[#8B0000] font-medium"
                   />
@@ -112,14 +126,14 @@ export default function ExperienceSection({ items, onChange }: ExperienceSection
                 <div className="text-right shrink-0">
                   <EditableText
                     value={item.period}
-                    onChange={(v) => updateItem(i, { period: v })}
+                    onChange={(v) => updateItem(sourceIndex, { period: v })}
                     as="p"
                     className="text-xs text-gray-500"
                     placeholder="Date range"
                   />
                   <EditableText
                     value={item.company}
-                    onChange={(v) => updateItem(i, { company: v })}
+                    onChange={(v) => updateItem(sourceIndex, { company: v })}
                     as="p"
                     className="text-xs font-semibold text-gray-700"
                     placeholder="Company"
@@ -130,7 +144,7 @@ export default function ExperienceSection({ items, onChange }: ExperienceSection
               <DndContext
                 sensors={sensors}
                 collisionDetection={closestCenter}
-                onDragEnd={(e) => handleBulletDragEnd(i, e)}
+                onDragEnd={(e) => handleBulletDragEnd(sourceIndex, e)}
               >
                 <SortableContext items={bulletIds} strategy={verticalListSortingStrategy}>
                   <ul className="mt-1.5 space-y-1 pl-3">
@@ -140,30 +154,30 @@ export default function ExperienceSection({ items, onChange }: ExperienceSection
                         id={bulletIds[bi]}
                         value={bullet}
                         isEditing={isEditing}
-                        onChange={(v) => updateBullet(i, bi, v)}
-                        onRemove={() => removeBullet(i, bi)}
+                        onChange={(v) => updateBullet(sourceIndex, bi, v)}
+                        onRemove={() => removeBullet(sourceIndex, bi)}
                       />
                     ))}
                   </ul>
                 </SortableContext>
               </DndContext>
 
-              {isEditing && (
+              {isEditing && showListActions && (
                 <button
-                  onClick={() => addBullet(i)}
+                  onClick={() => addBullet(sourceIndex)}
                   className="mt-1.5 ml-4 text-xs text-[#8B0000] hover:underline"
                 >
                   + Add bullet
                 </button>
               )}
 
-              {i < items.length - 1 && <hr className="mt-4 border-dashed border-gray-200" />}
+              {i < visibleItems.length - 1 && <hr className="mt-4 border-dashed border-gray-200" />}
             </div>
           );
         })}
       </div>
 
-      {isEditing && (
+      {isEditing && showListActions && (
         <button
           onClick={addItem}
           className="mt-4 w-full text-sm text-[#8B0000] border border-dashed border-[#8B0000] rounded py-1.5 hover:bg-red-50 transition-colors"

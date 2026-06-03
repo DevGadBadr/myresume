@@ -7,6 +7,7 @@ import {
   type LegacyResumeTemplate,
   type LegacyResumeTemplateSelection,
 } from '@/lib/template-content';
+import { normalizeLayoutSettings } from '@/lib/layout-settings';
 import type {
   CertEntry,
   ContactLink,
@@ -17,6 +18,7 @@ import type {
   ProjectDeployment,
   ProjectEntry,
   ResumeData,
+  ResumeLayoutSettings,
   ResumeTemplate,
   ResumeTemplateContent,
   SkillEntry,
@@ -271,9 +273,17 @@ function readLegacyTemplateSelection(value: unknown, path: string): LegacyResume
   };
 }
 
+function readLayout(value: unknown, path: string): ResumeLayoutSettings {
+  try {
+    return normalizeLayoutSettings(value);
+  } catch {
+    return normalizeLayoutSettings(undefined);
+  }
+}
+
 function readTemplateContent(value: unknown, path: string): ResumeTemplateContent {
   const record = readObject(value, path);
-  return {
+  const content: ResumeTemplateContent = {
     about: readString(record.about, `${path}.about`),
     experience: Array.isArray(record.experience)
       ? record.experience.map((item, index) =>
@@ -303,6 +313,10 @@ function readTemplateContent(value: unknown, path: string): ResumeTemplateConten
           throw new ResumeValidationError(`${path}.certificates must be an array`);
         })(),
   };
+  if (record.layout !== undefined) {
+    content.layout = readLayout(record.layout, `${path}.layout`);
+  }
+  return content;
 }
 
 function readLegacyResumeTemplate(value: unknown, path: string): LegacyResumeTemplate {
@@ -417,11 +431,17 @@ export function normalizeResumeData(value: unknown): ResumeData {
       ? record.activeTemplateId.trim()
       : templates[0]?.id;
 
-  return migrateTemplates({
+  const resume: ResumeData = {
     ...data,
     templates,
     activeTemplateId,
-  });
+  };
+
+  if (record.layout !== undefined) {
+    resume.layout = readLayout(record.layout, 'layout');
+  }
+
+  return migrateTemplates(resume);
 }
 
 export { buildContentFromLegacySelection };
