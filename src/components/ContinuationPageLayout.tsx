@@ -2,7 +2,7 @@
 
 import type { ResumeBlock } from '@/lib/resume-blocks';
 import type { ResumeData } from '@/types/resume';
-import ResumeBlockRenderer from '@/components/ResumeBlockRenderer';
+import BlockColumn from '@/components/BlockColumn';
 import { normalizeLayoutSettings } from '@/lib/layout-settings';
 
 interface ContinuationPageLayoutProps {
@@ -26,8 +26,6 @@ export default function ContinuationPageLayout({
   onLayoutChange,
   onSpacerResize,
 }: ContinuationPageLayoutProps) {
-  const layout = normalizeLayoutSettings(data.layout);
-
   const handleLayoutChange = (
     updater: (layout: import('@/types/resume').ResumeLayoutSettings) => import('@/types/resume').ResumeLayoutSettings
   ) => {
@@ -46,21 +44,5 @@ export default function ContinuationPageLayout({
     onSpacerResize,
   };
 
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.75rem' }}>
-      {blockIds.map((id) => {
-        const block = blocksById.get(id);
-        if (!block) return null;
-        const sectionStyle = block.section ? layout.sections?.[block.section] : undefined;
-        return (
-          <ResumeBlockRenderer
-            key={id}
-            block={block}
-            {...shared}
-            sectionMinHeightMm={sectionStyle?.minHeightMm}
-          />
-        );
-      })}
-    </div>
-  );
+  return <BlockColumn blockIds={blockIds} blocksById={blocksById} {...shared} />;
 }

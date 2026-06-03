@@ -4,6 +4,7 @@ import type { ComponentProps } from 'react';
 import type { CoverPageSlice } from '@/lib/page-packer';
 import type { ResumeBlock } from '@/lib/resume-blocks';
 import type { ResumeData } from '@/types/resume';
+import BlockColumn from '@/components/BlockColumn';
 import ResumeBlockRenderer from '@/components/ResumeBlockRenderer';
 import { normalizeLayoutSettings } from '@/lib/layout-settings';
 
@@ -40,8 +41,6 @@ export default function CoverPageLayout({
   onLayoutChange,
   onSpacerResize,
 }: CoverPageLayoutProps) {
-  const layout = normalizeLayoutSettings(data.layout);
-
   const handleLayoutChange = (
     updater: (layout: import('@/types/resume').ResumeLayoutSettings) => import('@/types/resume').ResumeLayoutSettings
   ) => {
@@ -60,47 +59,23 @@ export default function CoverPageLayout({
     onSpacerResize,
   };
 
-  const sectionStyle = (section: ResumeBlock['section']) =>
-    section ? layout.sections?.[section]?.minHeightMm : undefined;
-
   return (
     <>
       {renderBlocks(cover.headerIds, blocksById, shared)}
       {(cover.leftIds.length > 0 || cover.rightIds.length > 0) && (
         <div style={{ display: 'grid', gridTemplateColumns: '3fr 2fr', gap: '2rem', marginTop: 0 }}>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
-            {cover.leftIds.map((id) => {
-              const block = blocksById.get(id);
-              if (!block) return null;
-              return (
-                <ResumeBlockRenderer
-                  key={id}
-                  block={block}
-                  {...shared}
-                  sectionMinHeightMm={sectionStyle(block.section)}
-                />
-              );
-            })}
-          </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.75rem' }}>
-            {cover.rightIds.map((id) => {
-              const block = blocksById.get(id);
-              if (!block) return null;
-              return (
-                <ResumeBlockRenderer
-                  key={id}
-                  block={block}
-                  {...shared}
-                  sectionMinHeightMm={sectionStyle(block.section)}
-                />
-              );
-            })}
-          </div>
+          <BlockColumn
+            blockIds={cover.leftIds}
+            blocksById={blocksById}
+            columnGap="2rem"
+            {...shared}
+          />
+          <BlockColumn blockIds={cover.rightIds} blocksById={blocksById} {...shared} />
         </div>
       )}
       {cover.fullIds.length > 0 && (
         <div style={{ marginTop: '2rem' }}>
-          {renderBlocks(cover.fullIds, blocksById, shared)}
+          <BlockColumn blockIds={cover.fullIds} blocksById={blocksById} {...shared} />
         </div>
       )}
     </>
