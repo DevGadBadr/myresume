@@ -84,16 +84,63 @@ const ResumeSchema = new Schema<ResumeDocument>(
         id: { type: String, required: true },
         name: { type: String, required: true },
         targetTitle: { type: String, required: false },
-        summaryOverride: { type: String, required: false },
         hideContactInfo: { type: Boolean, required: true, default: false },
-        selected: {
-          experienceIds: [{ type: String, required: true }],
-          experienceBulletIndexes: { type: Schema.Types.Mixed, required: false },
-          projectIds: [{ type: String, required: true }],
-          projectBulletIndexes: { type: Schema.Types.Mixed, required: false },
-          skillIds: [{ type: String, required: true }],
-          educationIds: [{ type: String, required: true }],
-          certificateIds: [{ type: String, required: true }],
+        content: {
+          about: { type: String, required: true },
+          experience: [
+            {
+              id: { type: String, required: true },
+              role: { type: String, required: true },
+              roleSubtitle: { type: String, required: true },
+              company: { type: String, required: true },
+              period: { type: String, required: true },
+              bullets: [{ type: String, required: true }],
+            },
+          ],
+          projects: [
+            {
+              id: { type: String, required: true },
+              title: { type: String, required: true },
+              description: { type: String, required: true },
+              bullets: [{ type: String, required: true }],
+              tags: [{ type: String, required: true }],
+              deployment: {
+                url: { type: String, required: false },
+                credentials: [
+                  {
+                    id: { type: String, required: true },
+                    label: { type: String, required: true },
+                    value: { type: String, required: true },
+                  },
+                ],
+              },
+            },
+          ],
+          skills: [
+            {
+              id: { type: String, required: true },
+              label: { type: String, required: true },
+              category: { type: String, required: false },
+            },
+          ],
+          education: [
+            {
+              id: { type: String, required: true },
+              degree: { type: String, required: true },
+              institution: { type: String, required: true },
+              period: { type: String, required: true },
+            },
+          ],
+          certificates: [
+            {
+              id: { type: String, required: true },
+              title: { type: String, required: true },
+              issuer: { type: String, required: true },
+              date: { type: String, required: true },
+              hours: { type: String, required: false },
+              link: { type: String, required: false },
+            },
+          ],
         },
       },
     ],

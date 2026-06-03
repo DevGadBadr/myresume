@@ -1,10 +1,11 @@
-import type { ResumeData, SkillEntry } from '@/types/resume';
+import { deepCloneContent } from '@/lib/template-content';
+import type { ResumeData, ResumeTemplate, SkillEntry } from '@/types/resume';
 
 function createSkill(id: string, label: string, category?: string): SkillEntry {
   return category ? { id, label, category } : { id, label };
 }
 
-export const DEFAULT_RESUME_DATA: ResumeData = {
+const RESUME_LIBRARY_BODY = {
   personalInfo: {
     name: 'GAD BADR SAAD SANAD',
     title: 'SOFTWARE ENGINEER',
@@ -166,79 +167,47 @@ export const DEFAULT_RESUME_DATA: ResumeData = {
       date: 'July 18, 2025',
     },
   ],
-  activeTemplateId: 'default',
-  templates: [
+} satisfies Omit<ResumeData, 'templates' | 'activeTemplateId'>;
+
+function buildDefaultTemplates(
+  library: Omit<ResumeData, 'templates' | 'activeTemplateId'>
+): ResumeTemplate[] {
+  const upworkSkillLabels = new Set([
+    'Python',
+    'TypeScript',
+    'JavaScript',
+    'React',
+    'Node.js',
+    'NestJS',
+    'Selenium',
+    'Playwright',
+    'MongoDB',
+    'Docker',
+    'APIs',
+    'Web Development',
+  ]);
+
+  return [
     {
       id: 'default',
       name: 'Default Resume',
       hideContactInfo: false,
-      selected: {
-        experienceIds: ['1', '2'],
-        projectIds: ['1', '2', '3', '4'],
-        skillIds: [
-          'skill-python',
-          'skill-typescript',
-          'skill-javascript',
-          'skill-react',
-          'skill-node-js',
-          'skill-nestjs',
-          'skill-html',
-          'skill-css',
-          'skill-flask',
-          'skill-next-js',
-          'skill-selenium',
-          'skill-playwright',
-          'skill-make-com',
-          'skill-mysql',
-          'skill-postgresql',
-          'skill-mongodb',
-          'skill-docker',
-          'skill-devops',
-          'skill-aws',
-          'skill-google-cloud',
-          'skill-ubuntu',
-          'skill-ssh',
-          'skill-git',
-          'skill-vscode',
-          'skill-scada',
-          'skill-ignition',
-          'skill-web-sockets',
-          'skill-apis',
-          'skill-pyqt',
-          'skill-inkscape',
-          'skill-winscp',
-          'skill-putty',
-          'skill-engineering',
-          'skill-web-development',
-        ],
-        educationIds: ['1', '2'],
-        certificateIds: ['1', '2'],
-      },
+      content: deepCloneContent(library),
     },
     {
       id: 'upwork',
       name: 'Upwork Resume',
       hideContactInfo: true,
-      selected: {
-        experienceIds: ['1', '2'],
-        projectIds: ['1', '2', '3', '4'],
-        skillIds: [
-          'skill-python',
-          'skill-typescript',
-          'skill-javascript',
-          'skill-react',
-          'skill-node-js',
-          'skill-nestjs',
-          'skill-selenium',
-          'skill-playwright',
-          'skill-mongodb',
-          'skill-docker',
-          'skill-apis',
-          'skill-web-development',
-        ],
-        educationIds: ['1', '2'],
-        certificateIds: ['1', '2'],
+      content: {
+        ...deepCloneContent(library),
+        skills: library.skills.filter((skill) => upworkSkillLabels.has(skill.label)),
       },
     },
-  ],
+  ];
+}
+
+export const DEFAULT_RESUME_DATA: ResumeData = {
+  ...RESUME_LIBRARY_BODY,
+  activeTemplateId: 'default',
+  templates: buildDefaultTemplates(RESUME_LIBRARY_BODY),
 };

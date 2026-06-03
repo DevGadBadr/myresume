@@ -1,9 +1,5 @@
-import type {
-  ExperienceEntry,
-  ProjectEntry,
-  ResumeData,
-  ResumeTemplate,
-} from '@/types/resume';
+import type { ResumeData, ResumeTemplate } from '@/types/resume';
+import { assembleTemplateResume } from '@/lib/template-content';
 
 export const DEFAULT_TEMPLATE_ID = 'default';
 
@@ -22,26 +18,6 @@ export function getActiveTemplate(data: ResumeData, templateId?: string) {
   );
 }
 
-function filterBullets<T extends ExperienceEntry | ProjectEntry>(
-  item: T,
-  indexes: number[] | undefined
-): T {
-  if (!indexes || indexes.length === 0) {
-    return item;
-  }
-
-  const selectedIndexes = new Set(indexes);
-  return {
-    ...item,
-    bullets: item.bullets.filter((_, index) => selectedIndexes.has(index)),
-  };
-}
-
-function orderByIds<T extends { id: string }>(items: T[], selectedIds: string[]) {
-  const byId = new Map(items.map((item) => [item.id, item]));
-  return selectedIds.map((id) => byId.get(id)).filter((item): item is T => Boolean(item));
-}
-
 export function deriveResumeForTemplate(
   data: ResumeData,
   templateId?: string
@@ -52,29 +28,11 @@ export function deriveResumeForTemplate(
     return { data, template: data.templates[0], hideContactInfo: false };
   }
 
-  const selected = template.selected;
-  const nextData: ResumeData = {
-    ...data,
-    personalInfo: {
-      ...data.personalInfo,
-      title: template.targetTitle || data.personalInfo.title,
-    },
-    about: template.summaryOverride || data.about,
-    experience: orderByIds(data.experience, selected.experienceIds).map((item) =>
-      filterBullets(item, selected.experienceBulletIndexes?.[item.id])
-    ),
-    projects: orderByIds(data.projects, selected.projectIds).map((item) =>
-      filterBullets(item, selected.projectBulletIndexes?.[item.id])
-    ),
-    skills: orderByIds(data.skills, selected.skillIds),
-    education: orderByIds(data.education, selected.educationIds),
-    certificates: orderByIds(data.certificates, selected.certificateIds),
-    activeTemplateId: template.id,
-  };
-
   return {
-    data: nextData,
+    data: assembleTemplateResume(data, template),
     template,
     hideContactInfo: template.hideContactInfo,
   };
 }
+
+export { assembleTemplateResume } from '@/lib/template-content';

@@ -1,4 +1,12 @@
 import { DEFAULT_RESUME_DATA } from '@/lib/defaultData';
+import {
+  buildContentFromLegacySelection,
+  deepCloneContent,
+  ensureTemplateContent,
+  migrateTemplates,
+  type LegacyResumeTemplate,
+  type LegacyResumeTemplateSelection,
+} from '@/lib/template-content';
 import type {
   CertEntry,
   ContactLink,
@@ -10,7 +18,7 @@ import type {
   ProjectEntry,
   ResumeData,
   ResumeTemplate,
-  ResumeTemplateSelection,
+  ResumeTemplateContent,
   SkillEntry,
 } from '@/types/resume';
 
@@ -243,7 +251,7 @@ function readBulletIndexMap(value: unknown, path: string) {
   return result;
 }
 
-function readTemplateSelection(value: unknown, path: string): ResumeTemplateSelection {
+function readLegacyTemplateSelection(value: unknown, path: string): LegacyResumeTemplateSelection {
   const record = readObject(value, path);
 
   return {
@@ -263,14 +271,47 @@ function readTemplateSelection(value: unknown, path: string): ResumeTemplateSele
   };
 }
 
-function readResumeTemplate(value: unknown, path: string): ResumeTemplate {
+function readTemplateContent(value: unknown, path: string): ResumeTemplateContent {
   const record = readObject(value, path);
-  const template: ResumeTemplate = {
+  return {
+    about: readString(record.about, `${path}.about`),
+    experience: Array.isArray(record.experience)
+      ? record.experience.map((item, index) =>
+          readExperienceEntry(item, `${path}.experience[${index}]`)
+        )
+      : (() => {
+          throw new ResumeValidationError(`${path}.experience must be an array`);
+        })(),
+    projects: Array.isArray(record.projects)
+      ? record.projects.map((item, index) => readProjectEntry(item, `${path}.projects[${index}]`))
+      : (() => {
+          throw new ResumeValidationError(`${path}.projects must be an array`);
+        })(),
+    skills: readSkills(record.skills ?? []),
+    education: Array.isArray(record.education)
+      ? record.education.map((item, index) =>
+          readEducationEntry(item, `${path}.education[${index}]`)
+        )
+      : (() => {
+          throw new ResumeValidationError(`${path}.education must be an array`);
+        })(),
+    certificates: Array.isArray(record.certificates)
+      ? record.certificates.map((item, index) =>
+          readCertificateEntry(item, `${path}.certificates[${index}]`)
+        )
+      : (() => {
+          throw new ResumeValidationError(`${path}.certificates must be an array`);
+        })(),
+  };
+}
+
+function readLegacyResumeTemplate(value: unknown, path: string): LegacyResumeTemplate {
+  const record = readObject(value, path);
+  const template: LegacyResumeTemplate = {
     id: readString(record.id, `${path}.id`),
     name: readString(record.name, `${path}.name`),
     hideContactInfo:
       typeof record.hideContactInfo === 'boolean' ? record.hideContactInfo : false,
-    selected: readTemplateSelection(record.selected ?? {}, `${path}.selected`),
   };
 
   if (typeof record.targetTitle === 'string' && record.targetTitle.trim()) {
@@ -281,18 +322,18 @@ function readResumeTemplate(value: unknown, path: string): ResumeTemplate {
     template.summaryOverride = record.summaryOverride.trim();
   }
 
+  if (record.content !== undefined) {
+    template.content = readTemplateContent(record.content, `${path}.content`);
+  }
+
+  if (record.selected !== undefined) {
+    template.selected = readLegacyTemplateSelection(record.selected, `${path}.selected`);
+  }
+
   return template;
 }
 
-function createDefaultTemplates(data: Omit<ResumeData, 'templates' | 'activeTemplateId'>) {
-  const allSelection: ResumeTemplateSelection = {
-    experienceIds: data.experience.map((item) => item.id),
-    projectIds: data.projects.map((item) => item.id),
-    skillIds: data.skills.map((item) => item.id),
-    educationIds: data.education.map((item) => item.id),
-    certificateIds: data.certificates.map((item) => item.id),
-  };
-
+function createDefaultTemplates(data: Omit<ResumeData, 'templates' | 'activeTemplateId'>): ResumeTemplate[] {
   const upworkSkillLabels = new Set([
     'Python',
     'TypeScript',
@@ -308,23 +349,26 @@ function createDefaultTemplates(data: Omit<ResumeData, 'templates' | 'activeTemp
     'Web Development',
   ]);
 
+  const defaultContent = deepCloneContent(data);
+  const upworkContent: ResumeTemplateContent = {
+    ...deepCloneContent(data),
+    skills: data.skills.filter((skill) => upworkSkillLabels.has(skill.label)).map((skill) => ({
+      ...skill,
+    })),
+  };
+
   return [
     {
       id: 'default',
       name: 'Default Resume',
       hideContactInfo: false,
-      selected: allSelection,
+      content: defaultContent,
     },
     {
       id: 'upwork',
       name: 'Upwork Resume',
       hideContactInfo: true,
-      selected: {
-        ...allSelection,
-        skillIds: data.skills
-          .filter((skill) => upworkSkillLabels.has(skill.label))
-          .map((skill) => skill.id),
-      },
+      content: upworkContent,
     },
   ];
 }
@@ -359,21 +403,28 @@ export function normalizeResumeData(value: unknown): ResumeData {
         })(),
   };
 
-  const templates = Array.isArray(record.templates)
-    ? record.templates.map((item, index) => readResumeTemplate(item, `templates[${index}]`))
-    : createDefaultTemplates(data);
+  const legacyTemplates = Array.isArray(record.templates)
+    ? record.templates.map((item, index) => readLegacyResumeTemplate(item, `templates[${index}]`))
+    : createDefaultTemplates(data).map((template) => template as LegacyResumeTemplate);
+
+  const templates =
+    legacyTemplates.length > 0
+      ? legacyTemplates.map((template) => ensureTemplateContent(data, template))
+      : createDefaultTemplates(data);
 
   const activeTemplateId =
     typeof record.activeTemplateId === 'string' && record.activeTemplateId.trim()
       ? record.activeTemplateId.trim()
       : templates[0]?.id;
 
-  return {
+  return migrateTemplates({
     ...data,
-    templates: templates.length > 0 ? templates : createDefaultTemplates(data),
+    templates,
     activeTemplateId,
-  };
+  });
 }
+
+export { buildContentFromLegacySelection };
 
 export function normalizeStoredResume(value: unknown): ResumeData {
   try {

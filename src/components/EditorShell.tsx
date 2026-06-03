@@ -323,7 +323,7 @@ export default function EditorShell({ initialData, canEdit }: EditorShellProps) 
                     workspaceMode === 'main' ? 'bg-[var(--resume-text)] text-[var(--resume-paper)]' : 'text-[var(--resume-muted)]'
                   }`}
                 >
-                  Main
+                  Library
                 </button>
                 <button
                   type="button"
@@ -356,7 +356,7 @@ export default function EditorShell({ initialData, canEdit }: EditorShellProps) 
                 ? 'Generating...'
                 : workspaceMode === 'templates'
                   ? 'Download Template PDF'
-                  : 'Download PDF'}
+                  : 'Download Default Template PDF'}
             </button>
 
             {canEdit ? (
@@ -409,7 +409,9 @@ export default function EditorShell({ initialData, canEdit }: EditorShellProps) 
 
         <p className="no-print mt-4 text-center text-xs text-[var(--resume-subtle)]">
           {canEdit
-            ? 'Authenticated edits are auto-saved to MongoDB, with local draft recovery on failure.'
+            ? workspaceMode === 'templates'
+              ? 'Template edits are independent from the library. Use Import from library to copy sections. Auto-saved to MongoDB.'
+              : 'Library holds master content for importing into templates. Public view and PDF default use the default template. Auto-saved to MongoDB.'
             : 'Read-only mode. Sign in as the owner to edit this resume.'}
         </p>
       </div>
