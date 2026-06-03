@@ -1,3 +1,9 @@
+import {
+  BLOCK_COLUMN_GAP,
+  COVER_FULL_COLUMN_MARGIN,
+  measureColumnLayoutHeight,
+  remToPx,
+} from '@/lib/block-column-layout';
 import { PAGE_CONTENT_MM, pageContentHeightMm, resolvePageMargins } from '@/lib/page-layout';
 import {
   buildBlockStream,
@@ -8,6 +14,9 @@ import {
 } from '@/lib/resume-blocks';
 import type { ResumeData, ResumeLayoutSettings } from '@/types/resume';
 import { DEFAULT_LAYOUT_SETTINGS } from '@/types/resume';
+
+/** Left column gap on the cover grid (CoverPageLayout). */
+const COVER_LEFT_COLUMN_GAP = '2rem';
 
 const MM_TO_PX = 96 / 25.4;
 
@@ -50,6 +59,23 @@ function gridHeight(leftPx: number, rightPx: number) {
   return Math.max(leftPx, rightPx);
 }
 
+function blocksByIdMap(blocks: ResumeBlock[]) {
+  return new Map(blocks.map((block) => [block.id, block]));
+}
+
+/** Move trailing section headings to the next page so they stay with their entries. */
+function stripTrailingLonelyHeadings(placed: ResumeBlock[]): {
+  placed: ResumeBlock[];
+  pushed: ResumeBlock[];
+} {
+  const pushed: ResumeBlock[] = [];
+  const next = [...placed];
+  while (next.length > 0 && next[next.length - 1].kind === 'sectionHeading') {
+    pushed.unshift(next.pop()!);
+  }
+  return { placed: next, pushed };
+}
+
 function packHeaderStream(
   blocks: ResumeBlock[],
   heights: Map<string, number>,
@@ -90,6 +116,7 @@ function packHeaderStream(
 function packCoverGrid(
   leftBlocks: ResumeBlock[],
   rightBlocks: ResumeBlock[],
+  blocksById: Map<string, ResumeBlock>,
   heights: Map<string, number>,
   gridBudgetPx: number
 ): {
@@ -103,8 +130,21 @@ function packCoverGrid(
   let rightQueue = [...rightBlocks];
   const leftPlaced: ResumeBlock[] = [];
   const rightPlaced: ResumeBlock[] = [];
-  let leftUsed = 0;
-  let rightUsed = 0;
+
+  const leftLayoutPx = () =>
+    measureColumnLayoutHeight(
+      leftPlaced.map((block) => block.id),
+      blocksById,
+      heights,
+      COVER_LEFT_COLUMN_GAP
+    );
+  const rightLayoutPx = () =>
+    measureColumnLayoutHeight(
+      rightPlaced.map((block) => block.id),
+      blocksById,
+      heights,
+      BLOCK_COLUMN_GAP
+    );
 
   while (leftQueue.length > 0 || rightQueue.length > 0) {
     if (leftQueue[0] && isPageBreak(leftQueue[0])) {
@@ -113,7 +153,7 @@ function packCoverGrid(
         rightPlaced,
         leftRemaining: leftQueue,
         rightRemaining: rightQueue,
-        gridUsedPx: gridHeight(leftUsed, rightUsed),
+        gridUsedPx: gridHeight(leftLayoutPx(), rightLayoutPx()),
       };
     }
     if (rightQueue[0] && isPageBreak(rightQueue[0])) {
@@ -122,35 +162,47 @@ function packCoverGrid(
         rightPlaced,
         leftRemaining: leftQueue,
         rightRemaining: rightQueue,
-        gridUsedPx: gridHeight(leftUsed, rightUsed),
+        gridUsedPx: gridHeight(leftLayoutPx(), rightLayoutPx()),
       };
     }
 
     const leftHead = leftQueue[0];
     const rightHead = rightQueue[0];
-    const leftHeight = leftHead ? blockHeight(leftHead, heights) : Infinity;
-    const rightHeight = rightHead ? blockHeight(rightHead, heights) : Infinity;
+    const leftCandidatePx = leftHead
+      ? measureColumnLayoutHeight(
+          [...leftPlaced.map((block) => block.id), leftHead.id],
+          blocksById,
+          heights,
+          COVER_LEFT_COLUMN_GAP
+        )
+      : leftLayoutPx();
+    const rightCandidatePx = rightHead
+      ? measureColumnLayoutHeight(
+          [...rightPlaced.map((block) => block.id), rightHead.id],
+          blocksById,
+          heights,
+          BLOCK_COLUMN_GAP
+        )
+      : rightLayoutPx();
     const leftFits =
-      leftHead &&
-      gridHeight(leftUsed + leftHeight, rightUsed) <= gridBudgetPx + 0.5;
+      leftHead && gridHeight(leftCandidatePx, rightLayoutPx()) <= gridBudgetPx + 0.5;
     const rightFits =
-      rightHead &&
-      gridHeight(leftUsed, rightUsed + rightHeight) <= gridBudgetPx + 0.5;
+      rightHead && gridHeight(leftLayoutPx(), rightCandidatePx) <= gridBudgetPx + 0.5;
 
     if (!leftFits && !rightFits) {
       break;
     }
 
     const preferLeft =
-      leftFits && (!rightFits || leftHeight <= rightHeight);
+      leftFits &&
+      (!rightFits ||
+        blockHeight(leftHead!, heights) <= blockHeight(rightHead!, heights));
 
     if (preferLeft && leftHead) {
       leftPlaced.push(leftHead);
-      leftUsed += leftHeight;
       leftQueue = leftQueue.slice(1);
     } else if (rightHead && rightFits) {
       rightPlaced.push(rightHead);
-      rightUsed += rightHeight;
       rightQueue = rightQueue.slice(1);
     } else {
       break;
@@ -162,38 +214,55 @@ function packCoverGrid(
     rightPlaced,
     leftRemaining: leftQueue,
     rightRemaining: rightQueue,
-    gridUsedPx: gridHeight(leftUsed, rightUsed),
+    gridUsedPx: gridHeight(leftLayoutPx(), rightLayoutPx()),
   };
 }
 
 function packFullOnCover(
   fullBlocks: ResumeBlock[],
+  blocksById: Map<string, ResumeBlock>,
   heights: Map<string, number>,
-  budgetPx: number
+  budgetPx: number,
+  addTopMargin: boolean
 ): { placed: ResumeBlock[]; remaining: ResumeBlock[] } {
   const placed: ResumeBlock[] = [];
-  let used = 0;
   let index = 0;
+
+  const layoutPx = (ids: string[]) => {
+    let total = measureColumnLayoutHeight(ids, blocksById, heights);
+    if (ids.length > 0 && addTopMargin) {
+      total += remToPx(COVER_FULL_COLUMN_MARGIN);
+    }
+    return total;
+  };
 
   while (index < fullBlocks.length) {
     const block = fullBlocks[index];
     if (isPageBreak(block)) {
       return { placed, remaining: fullBlocks.slice(index) };
     }
-    const height = blockHeight(block, heights);
-    if (used > 0 && used + height > budgetPx + 0.5) {
+
+    const placedIds = placed.map((item) => item.id);
+    const candidateIds = [...placedIds, block.id];
+    const candidatePx = layoutPx(candidateIds);
+
+    if (placed.length > 0 && candidatePx > budgetPx + 0.5) {
       break;
     }
-    if (used === 0 && height > budgetPx + 0.5 && block.kind !== 'spacer') {
+    if (
+      placed.length === 0 &&
+      blockHeight(block, heights) > budgetPx + 0.5 &&
+      block.kind !== 'spacer'
+    ) {
       placed.push(block);
       index += 1;
       break;
     }
-    if (used + height > budgetPx + 0.5) {
+    if (candidatePx > budgetPx + 0.5) {
       break;
     }
+
     placed.push(block);
-    used += height;
     index += 1;
   }
 
@@ -202,35 +271,48 @@ function packFullOnCover(
 
 function packContinuationPage(
   queue: ResumeBlock[],
+  blocksById: Map<string, ResumeBlock>,
   heights: Map<string, number>,
   pageBudgetPx: number
 ): { placed: ResumeBlock[]; remaining: ResumeBlock[] } {
   const placed: ResumeBlock[] = [];
-  let used = 0;
   let index = 0;
 
   while (index < queue.length) {
     const block = queue[index];
     if (isPageBreak(block)) {
-      return { placed, remaining: queue.slice(index + 1) };
+      const { placed: trimmed, pushed } = stripTrailingLonelyHeadings(placed);
+      return { placed: trimmed, remaining: [...pushed, ...queue.slice(index + 1)] };
     }
-    const height = blockHeight(block, heights);
-    if (placed.length > 0 && used + height > pageBudgetPx + 0.5) {
+
+    const placedIds = placed.map((item) => item.id);
+    const candidateIds = [...placedIds, block.id];
+    const candidatePx = measureColumnLayoutHeight(candidateIds, blocksById, heights);
+
+    if (placed.length > 0 && candidatePx > pageBudgetPx + 0.5) {
       break;
     }
-    if (placed.length === 0 && height > pageBudgetPx + 0.5 && block.kind !== 'spacer') {
+    if (
+      placed.length === 0 &&
+      blockHeight(block, heights) > pageBudgetPx + 0.5 &&
+      block.kind !== 'spacer'
+    ) {
       placed.push(block);
-      return { placed, remaining: queue.slice(index + 1) };
-    }
-    if (used + height > pageBudgetPx + 0.5) {
+      index += 1;
       break;
     }
+    if (candidatePx > pageBudgetPx + 0.5) {
+      break;
+    }
+
     placed.push(block);
-    used += height;
     index += 1;
   }
 
-  return { placed, remaining: queue.slice(index) };
+  const { placed: trimmed, pushed } = stripTrailingLonelyHeadings(placed);
+  const remaining = [...pushed, ...queue.slice(index)];
+
+  return { placed: trimmed, remaining };
 }
 
 function toCoverAssignment(slice: CoverPageSlice): PageAssignment {
@@ -252,16 +334,33 @@ export function packBlocksIntoPages(
 ): PageAssignment[] {
   const pageBudgetPx = mmToPx(pageContentMm);
   const { headerBlocks, leftBlocks, rightBlocks, fullBlocks } = splitBlockStreams(blocks);
+  const blocksById = blocksByIdMap(blocks);
 
   const pages: PageAssignment[] = [];
 
   const headerPack = packHeaderStream(headerBlocks, heights, pageBudgetPx);
   const headerUsedPx = headerPack.usedPx;
   const gridBudgetPx = Math.max(0, pageBudgetPx - headerUsedPx);
-  const gridPack = packCoverGrid(leftBlocks, rightBlocks, heights, gridBudgetPx);
+  const gridPack = packCoverGrid(
+    leftBlocks,
+    rightBlocks,
+    blocksById,
+    heights,
+    gridBudgetPx
+  );
   const gridUsedPx = gridPack.gridUsedPx;
   const fullBudgetPx = Math.max(0, pageBudgetPx - headerUsedPx - gridUsedPx);
-  const fullPack = packFullOnCover(fullBlocks, heights, fullBudgetPx);
+  const coverHasHeaderOrGrid =
+    headerPack.placed.length > 0 ||
+    gridPack.leftPlaced.length > 0 ||
+    gridPack.rightPlaced.length > 0;
+  const fullPack = packFullOnCover(
+    fullBlocks,
+    blocksById,
+    heights,
+    fullBudgetPx,
+    coverHasHeaderOrGrid
+  );
 
   const cover: CoverPageSlice = {
     headerIds: headerPack.placed.map((block) => block.id),
@@ -293,7 +392,7 @@ export function packBlocksIntoPages(
       queue = queue.slice(1);
       continue;
     }
-    const packed = packContinuationPage(queue, heights, pageBudgetPx);
+    const packed = packContinuationPage(queue, blocksById, heights, pageBudgetPx);
     if (packed.placed.length === 0 && queue[0]) {
       pages.push(toContinuationAssignment([queue[0].id]));
       queue = queue.slice(1);

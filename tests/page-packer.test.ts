@@ -6,6 +6,33 @@ import { pageContentHeightMm, resolvePageMargins } from '../src/lib/page-layout.
 import { DEFAULT_RESUME_DATA } from '../src/lib/defaultData.ts';
 import { normalizeLayoutSettings } from '../src/lib/layout-settings.ts';
 
+test('packBlocksIntoPages does not orphan projects heading at end of a page', () => {
+  const data = {
+    ...DEFAULT_RESUME_DATA,
+    layout: normalizeLayoutSettings({
+      controls: [
+        {
+          id: 'break-1',
+          type: 'pageBreak',
+          anchor: { kind: 'beforeSection', section: 'projects' },
+        },
+      ],
+    }),
+  };
+
+  const blocks = buildBlockStream(data, data.layout!);
+  const heights = new Map(blocks.map((block) => [block.id, mmToPx(12)]));
+  const pages = packBlocksIntoPages(blocks, heights);
+
+  for (const page of pages) {
+    const ids = page.layout === 'cover' ? page.blockIds : page.blockIds;
+    const lastId = ids[ids.length - 1];
+    if (lastId === 'heading-projects') {
+      assert.fail('projects section heading must not be the last block on a page');
+    }
+  }
+});
+
 test('packBlocksIntoPages respects page break before continuation content', () => {
   const data = {
     ...DEFAULT_RESUME_DATA,
