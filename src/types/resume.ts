@@ -90,9 +90,17 @@ export interface SectionLayoutStyle {
   paddingBottomMm?: number;
 }
 
+export interface PageMarginsMm {
+  top: number;
+  right: number;
+  bottom: number;
+  left: number;
+}
+
 export interface ResumeLayoutSettings {
   controls: LayoutControl[];
   sections?: Partial<Record<SectionKey, SectionLayoutStyle>>;
+  pageMargins?: Partial<PageMarginsMm>;
 }
 
 export const DEFAULT_LAYOUT_SETTINGS: ResumeLayoutSettings = {

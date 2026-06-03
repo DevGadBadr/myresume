@@ -1,4 +1,4 @@
-import { PAGE_CONTENT_MM } from '@/lib/page-layout';
+import { PAGE_CONTENT_MM, pageContentHeightMm, resolvePageMargins } from '@/lib/page-layout';
 import {
   buildBlockStream,
   continuationQueue,
@@ -320,7 +320,8 @@ export function packResumeIntoPages(
   layout: ResumeLayoutSettings = DEFAULT_LAYOUT_SETTINGS
 ): PageAssignment[] {
   const blocks = buildBlockStream(data, layout);
-  return packBlocksIntoPages(blocks, heights);
+  const contentMm = pageContentHeightMm(resolvePageMargins(layout));
+  return packBlocksIntoPages(blocks, heights, contentMm);
 }
 
 export function columnForBlockId(

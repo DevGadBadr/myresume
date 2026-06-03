@@ -202,31 +202,6 @@
   background-color: var(--resume-accent-dark);
 }
 
-/* Layout guide overlays (preview only) */
-.resume-pages-preview.show-page-guides .resume-page-shell::before {
-  content: '';
-  position: absolute;
-  inset: 12mm;
-  border: 1px dashed color-mix(in srgb, var(--resume-accent) 35%, transparent);
-  pointer-events: none;
-  z-index: 2;
-}
-
-.resume-pages-preview.show-page-guides .resume-page-content::after {
-  content: '';
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  border-top: 1px dashed color-mix(in srgb, var(--resume-muted) 40%, transparent);
-  pointer-events: none;
-}
-
-.resume-pages-preview.show-section-guides .resume-section-block {
-  outline: 1px dashed color-mix(in srgb, var(--resume-accent) 22%, transparent);
-  outline-offset: 2px;
-}
-
 .resume-spacer-fill {
   border-radius: 2px;
 }

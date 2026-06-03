@@ -15,8 +15,6 @@ interface TemplateEditorProps {
   activeTemplateId: string;
   onActiveTemplateChange: (templateId: string) => void;
   onChange: React.Dispatch<React.SetStateAction<ResumeData>>;
-  showPageGuides?: boolean;
-  showSectionGuides?: boolean;
 }
 
 const IMPORT_SECTIONS: { key: TemplateContentSectionKey | 'all'; label: string }[] = [
@@ -43,8 +41,6 @@ export default function TemplateEditor({
   activeTemplateId,
   onActiveTemplateChange,
   onChange,
-  showPageGuides = false,
-  showSectionGuides = false,
 }: TemplateEditorProps) {
   const template =
     data.templates.find((item) => item.id === activeTemplateId) ?? data.templates[0];
@@ -277,8 +273,6 @@ export default function TemplateEditor({
           hideContactInfo={template.hideContactInfo}
           showPageGaps
           showShadow
-          showPageGuides={showPageGuides}
-          showSectionGuides={showSectionGuides}
         />
       </div>
     </div>

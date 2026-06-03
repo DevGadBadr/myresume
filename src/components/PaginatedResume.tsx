@@ -3,12 +3,14 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { ResumeData } from '@/types/resume';
 import {
-  PAGE_CONTENT_MM,
-  PAGE_MARGIN_MM,
+  pageContentHeightMm,
   PAGE_TOTAL_MM,
   PAGE_WIDTH_MM,
+  resolvePageMargins,
 } from '@/lib/page-layout';
-import { buildBlockStream, type ResumeBlock } from '@/lib/resume-blocks';
+import type { PageMarginsMm } from '@/types/resume';
+import PageMarginGuides from '@/components/PageMarginGuides';
+import { buildBlockStream } from '@/lib/resume-blocks';
 import { packResumeIntoPages, type PageAssignment } from '@/lib/page-packer';
 import { normalizeLayoutSettings } from '@/lib/layout-settings';
 import ResumeBlockDocument from '@/components/ResumeBlockDocument';
@@ -24,8 +26,6 @@ interface PaginatedResumeProps {
   showShadow?: boolean;
   printMode?: boolean;
   hideContactInfo?: boolean;
-  showPageGuides?: boolean;
-  showSectionGuides?: boolean;
 }
 
 export default function PaginatedResume({
@@ -35,14 +35,14 @@ export default function PaginatedResume({
   showShadow = false,
   printMode = false,
   hideContactInfo = false,
-  showPageGuides = false,
-  showSectionGuides = false,
 }: PaginatedResumeProps) {
   const measureRef = useRef<HTMLDivElement>(null);
   const [pages, setPages] = useState<PageAssignment[]>([]);
   const [isReady, setIsReady] = useState(false);
 
   const layout = normalizeLayoutSettings(data.layout);
+  const pageMargins = useMemo(() => resolvePageMargins(layout), [layout]);
+  const contentHeightMm = useMemo(() => pageContentHeightMm(pageMargins), [pageMargins]);
   const blocks = useMemo(() => buildBlockStream(data, layout), [data, layout]);
   const blocksById = useMemo(
     () => new Map(blocks.map((block) => [block.id, block])),
@@ -132,12 +132,24 @@ export default function PaginatedResume({
     [onChange]
   );
 
-  const guideClass = [
-    showPageGuides ? 'show-page-guides' : '',
-    showSectionGuides ? 'show-section-guides' : '',
-  ]
-    .filter(Boolean)
-    .join(' ');
+  const handleMarginsChange = useCallback(
+    (margins: PageMarginsMm) => {
+      if (!onChange) return;
+      onChange((current) => {
+        const currentLayout = normalizeLayoutSettings(current.layout);
+        return {
+          ...current,
+          layout: {
+            ...currentLayout,
+            pageMargins: margins,
+          },
+        };
+      });
+    },
+    [onChange]
+  );
+
+  const pagePadding = `${pageMargins.top}mm ${pageMargins.right}mm ${pageMargins.bottom}mm ${pageMargins.left}mm`;
 
   return (
     <>
@@ -149,7 +161,7 @@ export default function PaginatedResume({
           left: '-9999px',
           top: 0,
           width: `${PAGE_WIDTH_MM}mm`,
-          padding: `0 ${PAGE_MARGIN_MM}mm`,
+          padding: `0 ${pageMargins.left}mm 0 ${pageMargins.right}mm`,
           fontSize: '13px',
           pointerEvents: 'none',
           visibility: 'hidden',
@@ -165,7 +177,7 @@ export default function PaginatedResume({
       </div>
 
       <div
-        className={`${printMode ? 'resume-pages-print' : 'resume-pages-preview'} ${guideClass}`.trim()}
+        className={printMode ? 'resume-pages-print' : 'resume-pages-preview'}
         data-print-ready={printMode ? String(isReady) : undefined}
       >
         {pages.map((page, pageIndex) => (
@@ -175,16 +187,19 @@ export default function PaginatedResume({
               style={{
                 width: `${PAGE_WIDTH_MM}mm`,
                 height: `${PAGE_TOTAL_MM}mm`,
-                padding: `${PAGE_MARGIN_MM}mm`,
+                padding: pagePadding,
                 fontSize: '13px',
                 overflow: 'hidden',
                 position: 'relative',
               }}
             >
+              {!printMode && onChange && (
+                <PageMarginGuides margins={pageMargins} onMarginsChange={handleMarginsChange} />
+              )}
               <div
                 className="resume-page-content"
                 style={{
-                  height: `${PAGE_CONTENT_MM}mm`,
+                  height: `${contentHeightMm}mm`,
                   overflow: 'hidden',
                   position: 'relative',
                 }}

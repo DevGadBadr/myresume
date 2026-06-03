@@ -1,11 +1,13 @@
 import type {
   LayoutAnchor,
   LayoutControl,
+  PageMarginsMm,
   ResumeLayoutSettings,
   SectionKey,
   SectionLayoutStyle,
 } from '@/types/resume';
 import { DEFAULT_LAYOUT_SETTINGS } from '@/types/resume';
+import { clampMarginMm } from '@/lib/page-layout';
 
 const SECTION_KEYS: SectionKey[] = [
   'experience',
@@ -98,6 +100,26 @@ function readSectionLayoutStyle(value: unknown, path: string): SectionLayoutStyl
   return style;
 }
 
+function readPageMargins(value: unknown): Partial<PageMarginsMm> | undefined {
+  if (!value || typeof value !== 'object') {
+    return undefined;
+  }
+  const record = value as Record<string, unknown>;
+  const margins: Partial<PageMarginsMm> = {};
+  const sides: (keyof PageMarginsMm)[] = ['top', 'right', 'bottom', 'left'];
+  for (const side of sides) {
+    if (record[side] === undefined) {
+      continue;
+    }
+    const mm = Number(record[side]);
+    if (!Number.isFinite(mm)) {
+      continue;
+    }
+    margins[side] = clampMarginMm(mm);
+  }
+  return Object.keys(margins).length > 0 ? margins : undefined;
+}
+
 export function normalizeLayoutSettings(value: unknown): ResumeLayoutSettings {
   if (value === undefined || value === null) {
     return { ...DEFAULT_LAYOUT_SETTINGS, controls: [], sections: {} };
@@ -130,7 +152,12 @@ export function normalizeLayoutSettings(value: unknown): ResumeLayoutSettings {
     });
   }
 
-  return { controls, sections };
+  const pageMargins = readPageMargins(record.pageMargins);
+  const result: ResumeLayoutSettings = { controls, sections };
+  if (pageMargins) {
+    result.pageMargins = pageMargins;
+  }
+  return result;
 }
 
 export function cloneLayoutSettings(layout?: ResumeLayoutSettings): ResumeLayoutSettings {
@@ -143,6 +170,7 @@ export function cloneLayoutSettings(layout?: ResumeLayoutSettings): ResumeLayout
         { ...style },
       ])
     ) as Partial<Record<SectionKey, SectionLayoutStyle>>,
+    pageMargins: normalized.pageMargins ? { ...normalized.pageMargins } : undefined,
   };
 }
 
