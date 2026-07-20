@@ -70,9 +70,14 @@ function SkillChip({ id, label, isEditing, onRemove }: SkillChipProps) {
 interface SkillsSectionProps {
   skills: SkillEntry[];
   onChange: (skills: SkillEntry[]) => void;
+  showHeading?: boolean;
 }
 
-export default function SkillsSection({ skills, onChange }: SkillsSectionProps) {
+export default function SkillsSection({
+  skills,
+  onChange,
+  showHeading = true,
+}: SkillsSectionProps) {
   const { isEditing } = useEditMode();
   const [inputVal, setInputVal] = useState('');
 
@@ -117,18 +122,14 @@ export default function SkillsSection({ skills, onChange }: SkillsSectionProps) 
 
   return (
     <section>
-      <h2 className="section-heading">Fields of Knowledge</h2>
+      {showHeading && <h2 className="section-heading">Fields of Knowledge</h2>}
       <DndContext
         sensors={sensors}
         collisionDetection={closestCenter}
         onDragEnd={handleDragEnd}
       >
         <SortableContext items={skillIds} strategy={rectSortingStrategy}>
-          <div
-            className={`flex flex-wrap gap-1.5 ${
-              isEditing ? 'max-h-52 overflow-y-auto pr-2 content-start' : ''
-            }`}
-          >
+          <div className="flex flex-wrap gap-1.5 content-start">
             {skills.map((skill, i) => (
               <SkillChip
                 key={skillIds[i]}

@@ -21,7 +21,7 @@ export interface ResumeLayoutDefinition {
 export const SECTION_LABELS: Record<SectionKey, string> = {
   experience: 'Experience',
   projects: 'Projects',
-  skills: 'Skills',
+  skills: 'Fields of Knowledge',
   education: 'Education',
   certificates: 'Certificates',
   about: 'About Me',

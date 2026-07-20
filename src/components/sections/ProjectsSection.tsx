@@ -466,7 +466,7 @@ export default function ProjectsSection({
         </SortableContext>
       </DndContext>
 
-      {isEditing && showListActions && (
+      {isEditing && showListActions && !onlyEntryIds && (
         <button
           onClick={addItem}
           className="mt-4 w-full text-sm text-[#8B0000] border border-dashed border-[#8B0000] rounded py-1.5 hover:bg-red-50 transition-colors"

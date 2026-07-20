@@ -138,7 +138,7 @@ export default function ExperienceSection({
         })}
       </div>
 
-      {isEditing && showListActions && (
+      {isEditing && showListActions && !onlyEntryIds && (
         <button
           type="button"
           onClick={addItem}
