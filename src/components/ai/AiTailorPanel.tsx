@@ -7,6 +7,7 @@ import type { AiChatMessage, AiGenerateResponse, AiTailorSummary } from '@/lib/a
 import { withUniqueSavedName } from '@/lib/ai/variant-naming';
 import { assembleTemplateResume } from '@/lib/template-content';
 import ResumeFlowDocument from '@/components/ResumeFlowDocument';
+import AiGenerateWizard from '@/components/ai/AiGenerateWizard';
 import { EditModeContext } from '@/context/EditModeContext';
 
 interface AiTailorPanelProps {
@@ -421,7 +422,9 @@ export default function AiTailorPanel({ data, onChange, onSavedToResumes }: AiTa
       </aside>
 
       <div>
-        {previewData ? (
+        {status === 'generating' ? (
+          <AiGenerateWizard jobTitle={jobTitle} company={company} />
+        ) : previewData ? (
           <EditModeContext.Provider value={{ isEditing: false, toggle: () => undefined }}>
             <ResumeFlowDocument
               data={previewData}
@@ -432,9 +435,16 @@ export default function AiTailorPanel({ data, onChange, onSavedToResumes }: AiTa
             />
           </EditModeContext.Provider>
         ) : (
-          <div className="flex min-h-[480px] items-center justify-center rounded border border-dashed border-[var(--resume-border)] bg-[var(--resume-panel)] p-8 text-center text-sm text-[var(--resume-muted)]">
-            Generate a tailored draft to preview it here. Layout starts from your library and can be
-            edited after you save the variant.
+          <div className="flex min-h-[480px] flex-col items-center justify-center gap-3 rounded border border-dashed border-[var(--resume-border)] bg-[var(--resume-panel)] p-8 text-center">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--resume-muted)]">
+              Draft preview
+            </p>
+            <p className="max-w-sm text-sm text-[var(--resume-text)]">
+              Paste a job description and hit Generate to build a tailored draft here.
+            </p>
+            <p className="max-w-sm text-xs text-[var(--resume-muted)]">
+              Layout starts from your library and can be edited after you save the variant.
+            </p>
           </div>
         )}
       </div>
