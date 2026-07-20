@@ -23,7 +23,7 @@ const nextConfig: NextConfig = {
   eslint: {
     ignoreDuringBuilds: true,
   },
-  serverExternalPackages: ['mongoose', 'puppeteer'],
+  serverExternalPackages: ['mongoose', 'puppeteer', 'openai'],
   outputFileTracingRoot: path.join(__dirname),
 };
 

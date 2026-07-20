@@ -14,12 +14,13 @@ import { tryNormalizeResumeData } from '@/lib/resume-validation';
 import { DEFAULT_COLOR_THEME, normalizeColorTheme, type ColorTheme } from '@/lib/theme';
 import ResumeFlowDocument from '@/components/ResumeFlowDocument';
 import TemplateEditor from '@/components/TemplateEditor';
+import AiTailorPanel from '@/components/ai/AiTailorPanel';
 import { DEFAULT_TEMPLATE_ID } from '@/lib/resume-template';
 import { normalizeLayoutId, RESUME_LAYOUTS } from '@/layouts';
 import { RESUME_LAYOUT_IDS, type ResumeLayoutId } from '@/types/resume';
 
 type SaveStatus = 'idle' | 'dirty' | 'saving' | 'saved' | 'error';
-type WorkspaceMode = 'main' | 'templates';
+type WorkspaceMode = 'main' | 'templates' | 'ai';
 
 interface EditorShellProps {
   initialData: ResumeData;
@@ -211,7 +212,7 @@ export default function EditorShell({ initialData, canEdit }: EditorShellProps) 
     setPdfLoading(true);
     try {
       const templateId =
-        workspaceMode === 'templates'
+        workspaceMode === 'templates' || workspaceMode === 'ai'
           ? activeTemplateId
           : (data.activeTemplateId ?? DEFAULT_TEMPLATE_ID);
       const templateName =
@@ -271,7 +272,9 @@ export default function EditorShell({ initialData, canEdit }: EditorShellProps) 
   const savedAtLabel = formatSavedAt(lastSavedAt);
   const editEnabled = canEdit && isEditing;
   const shellMaxWidth =
-    workspaceMode === 'templates' ? EDITOR_TEMPLATES_MAX_WIDTH : EDITOR_SHELL_MAX_WIDTH;
+    workspaceMode === 'templates' || workspaceMode === 'ai'
+      ? EDITOR_TEMPLATES_MAX_WIDTH
+      : EDITOR_SHELL_MAX_WIDTH;
   const headerMaxWidth = shellMaxWidth;
 
   const handleActiveTemplateChange = useCallback(
@@ -281,6 +284,12 @@ export default function EditorShell({ initialData, canEdit }: EditorShellProps) 
     },
     []
   );
+
+  const handleAiSavedToResumes = useCallback((templateId: string) => {
+    setActiveTemplateId(templateId);
+    setData((current) => ({ ...current, activeTemplateId: templateId }));
+    setWorkspaceMode('templates');
+  }, []);
 
   return (
     <EditModeContext.Provider
@@ -344,6 +353,15 @@ export default function EditorShell({ initialData, canEdit }: EditorShellProps) 
                   }`}
                 >
                   Resumes
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setWorkspaceMode('ai')}
+                  className={`rounded px-2 py-1 text-xs ${
+                    workspaceMode === 'ai' ? 'bg-[var(--resume-text)] text-[var(--resume-paper)]' : 'text-[var(--resume-muted)]'
+                  }`}
+                >
+                  AI
                 </button>
               </div>
             )}
@@ -413,6 +431,12 @@ export default function EditorShell({ initialData, canEdit }: EditorShellProps) 
             activeTemplateId={activeTemplateId}
             onActiveTemplateChange={handleActiveTemplateChange}
             onChange={setData}
+          />
+        ) : workspaceMode === 'ai' && canEdit ? (
+          <AiTailorPanel
+            data={data}
+            onChange={setData}
+            onSavedToResumes={handleAiSavedToResumes}
           />
         ) : (
           <>

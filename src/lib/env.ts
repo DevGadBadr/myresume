@@ -4,6 +4,8 @@ type RequiredEnvKey =
   | 'ADMIN_USERNAME'
   | 'ADMIN_PASSWORD';
 
+type OpenAiEnvKey = 'OPENAI_API_KEY' | 'OPENAI_MODEL';
+
 export interface AppEnv {
   MONGODB_URI: string;
   AUTH_SECRET: string;
@@ -11,9 +13,15 @@ export interface AppEnv {
   ADMIN_PASSWORD: string;
 }
 
-let cachedEnv: AppEnv | null = null;
+export interface OpenAiEnv {
+  OPENAI_API_KEY: string;
+  OPENAI_MODEL: string;
+}
 
-function readRequiredEnv(key: RequiredEnvKey): string {
+let cachedEnv: AppEnv | null = null;
+let cachedOpenAiEnv: OpenAiEnv | null = null;
+
+function readRequiredEnv(key: RequiredEnvKey | OpenAiEnvKey): string {
   const value = process.env[key]?.trim();
   if (!value) {
     throw new Error(`Missing required environment variable: ${key}`);
@@ -35,4 +43,18 @@ export function getEnv(): AppEnv {
   };
 
   return cachedEnv;
+}
+
+/** OpenAI credentials — read on AI routes only so non-AI paths stay usable. */
+export function getOpenAiEnv(): OpenAiEnv {
+  if (cachedOpenAiEnv) {
+    return cachedOpenAiEnv;
+  }
+
+  cachedOpenAiEnv = {
+    OPENAI_API_KEY: readRequiredEnv('OPENAI_API_KEY'),
+    OPENAI_MODEL: readRequiredEnv('OPENAI_MODEL'),
+  };
+
+  return cachedOpenAiEnv;
 }

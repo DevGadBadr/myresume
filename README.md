@@ -17,6 +17,8 @@ The app runs on `http://localhost:3007/myresume` in production (PM2). Dev may us
 - `AUTH_SECRET`: secret used to sign the owner session cookie.
 - `ADMIN_USERNAME`: owner login username.
 - `ADMIN_PASSWORD`: owner login password.
+- `OPENAI_API_KEY`: OpenAI API key used by the AI Tailor workspace (required when using AI routes).
+- `OPENAI_MODEL`: OpenAI chat model id, for example `gpt-4.1-mini`.
 
 When you use the provided `docker-compose.yml`, the Mongo container reads `.env.local`, derives its init username, password, and database from `MONGODB_URI`, and stores data in the persistent `resume_mongo_data` Docker volume.
 
@@ -34,7 +36,7 @@ When you use the provided `docker-compose.yml`, the Mongo container reads `.env.
 - Continuous document flow with A4 page boundary guides — no JS page packer clipping.
 - Multiple resume variants under the Resumes workspace; each can pick a layout: Classic, Split, or Compact.
 - PDF download uses the active resume variant.
-
+- **AI** workspace: paste a job description to generate a tailored draft from the library, review Content Added / library proposals / gaps, refine via chat, then optionally Save as a new Resumes variant (unchecked by default = generate and forget).
 
 ## Deployment Notes
 
@@ -54,3 +56,5 @@ When you use the provided `docker-compose.yml`, the Mongo container reads `.env.
   - `AUTH_SECRET`
   - `ADMIN_USERNAME`
   - `ADMIN_PASSWORD`
+  - `OPENAI_API_KEY`
+  - `OPENAI_MODEL`
