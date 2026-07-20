@@ -9,7 +9,7 @@ Single-resume Next.js app for viewing, editing, and exporting a resume as PDF. T
 3. Install dependencies with `npm install`.
 4. Run `npm run dev`.
 
-The app runs on `http://localhost:3008/myresume`.
+The app runs on `http://localhost:3007/myresume` in production (PM2). Dev may use another port via `next dev`.
 
 ## Required Environment Variables
 
