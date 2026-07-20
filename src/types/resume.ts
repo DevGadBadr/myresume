@@ -82,6 +82,19 @@ export type SectionKey =
   | 'certificates'
   | 'about';
 
+export const ALL_SECTION_KEYS: SectionKey[] = [
+  'about',
+  'experience',
+  'projects',
+  'education',
+  'certificates',
+  'skills',
+];
+
+export function isSectionKey(value: unknown): value is SectionKey {
+  return typeof value === 'string' && (ALL_SECTION_KEYS as string[]).includes(value);
+}
+
 export type LayoutAnchor =
   | { kind: 'afterHeader' }
   | { kind: 'beforeSection'; section: SectionKey }
@@ -136,7 +149,17 @@ export interface ResumeTemplate {
   hideContactInfo: boolean;
   /** Visual layout theme for this resume variant. */
   layoutId?: ResumeLayoutId;
+  /** Custom main-section order for this resume variant. */
+  sectionOrder?: SectionKey[];
+  /** Blank space (in lines) after specific sections. */
+  sectionSpacers?: SectionSpacer[];
   content: ResumeTemplateContent;
+}
+
+export interface SectionSpacer {
+  afterSection: SectionKey;
+  /** Number of blank lines of vertical space after the section. */
+  lines: number;
 }
 
 export interface ResumeData {
@@ -151,5 +174,9 @@ export interface ResumeData {
   activeTemplateId?: string;
   /** Default visual layout when editing the library body. */
   layoutId?: ResumeLayoutId;
+  /** Custom main-section order for the library body. */
+  sectionOrder?: SectionKey[];
+  /** Blank space (in lines) after specific sections. */
+  sectionSpacers?: SectionSpacer[];
   layout?: ResumeLayoutSettings;
 }

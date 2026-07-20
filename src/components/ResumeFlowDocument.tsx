@@ -222,12 +222,6 @@ export default function ResumeFlowDocument({
           </div>
         ))}
       </div>
-
-      {!printMode && (
-        <p className="no-print mt-3 text-center text-[10px] text-[var(--resume-subtle)]">
-          {pages.length} page{pages.length === 1 ? '' : 's'} · blocks never split across pages
-        </p>
-      )}
     </div>
   );
 }

@@ -3,6 +3,11 @@
 import type { FlowBlock } from '@/lib/flow-blocks';
 import type { ResumeData, SectionKey } from '@/types/resume';
 import { SECTION_LABELS } from '@/layouts/types';
+import { getLayoutDefinition, normalizeLayoutId } from '@/layouts';
+import {
+  moveSectionInOrder,
+  sectionOrderFromData,
+} from '@/lib/section-order';
 import Header from '@/components/sections/Header';
 import AboutMeSection from '@/components/sections/AboutMeSection';
 import ExperienceSection from '@/components/sections/ExperienceSection';
@@ -10,6 +15,15 @@ import ProjectsSection from '@/components/sections/ProjectsSection';
 import SkillsSection from '@/components/sections/SkillsSection';
 import EducationSection from '@/components/sections/EducationSection';
 import CertificatesSection from '@/components/sections/CertificatesSection';
+import {
+  adjustSectionSpacer,
+  getSpacerLinesAfter,
+  MAX_SECTION_SPACER_LINES,
+  MIN_SECTION_SPACER_LINES,
+  removeSectionSpacer,
+  SECTION_SPACER_LINE_REM,
+  upsertSectionSpacer,
+} from '@/lib/section-spacers';
 import { useEditMode } from '@/context/EditModeContext';
 
 interface FlowBlockRendererProps {
@@ -21,11 +35,144 @@ interface FlowBlockRendererProps {
 
 const noop = () => {};
 
-function SectionActions({
+function SectionSpacerBlock({
   section,
+  lines,
   onChange,
 }: {
   section: SectionKey;
+  lines: number;
+  onChange?: React.Dispatch<React.SetStateAction<ResumeData>>;
+}) {
+  const { isEditing } = useEditMode();
+  const height = `${Math.max(lines, 1) * SECTION_SPACER_LINE_REM}rem`;
+
+  if (!isEditing) {
+    return <div className="resume-section-spacer" style={{ height }} aria-hidden />;
+  }
+
+  return (
+    <div
+      className="resume-section-spacer resume-section-spacer-edit no-print relative"
+      style={{ minHeight: height, height }}
+    >
+      <div className="absolute inset-x-0 top-1/2 flex -translate-y-1/2 items-center justify-center gap-1.5">
+        <span className="text-[10px] uppercase tracking-wider text-gray-400">
+          Space · {lines} line{lines === 1 ? '' : 's'}
+        </span>
+        <button
+          type="button"
+          disabled={!onChange || lines <= MIN_SECTION_SPACER_LINES}
+          onClick={() =>
+            onChange?.((current) => ({
+              ...current,
+              sectionSpacers: adjustSectionSpacer(current, section, -1),
+            }))
+          }
+          className="rounded border border-gray-200 px-2 py-0.5 text-[11px] text-gray-500 hover:bg-gray-50 disabled:opacity-40"
+          title="Remove one line"
+        >
+          − Line
+        </button>
+        <button
+          type="button"
+          disabled={!onChange || lines >= MAX_SECTION_SPACER_LINES}
+          onClick={() =>
+            onChange?.((current) => ({
+              ...current,
+              sectionSpacers: adjustSectionSpacer(current, section, 1),
+            }))
+          }
+          className="rounded border border-gray-200 px-2 py-0.5 text-[11px] text-gray-500 hover:bg-gray-50 disabled:opacity-40"
+          title="Add one line"
+        >
+          + Line
+        </button>
+        <button
+          type="button"
+          disabled={!onChange}
+          onClick={() =>
+            onChange?.((current) => ({
+              ...current,
+              sectionSpacers: removeSectionSpacer(current.sectionSpacers, section),
+            }))
+          }
+          className="rounded border border-red-200 px-2 py-0.5 text-[11px] text-red-500 hover:bg-red-50 disabled:opacity-40"
+          title="Remove spacer"
+        >
+          Remove
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function SectionHeadingControls({
+  section,
+  data,
+  onChange,
+}: {
+  section: SectionKey;
+  data: ResumeData;
+  onChange?: React.Dispatch<React.SetStateAction<ResumeData>>;
+}) {
+  const { isEditing } = useEditMode();
+  const layout = getLayoutDefinition(normalizeLayoutId(data.layoutId));
+  const order = sectionOrderFromData(data, layout);
+  const index = order.indexOf(section);
+
+  if (!isEditing || index < 0) {
+    return <h2 className="section-heading">{SECTION_LABELS[section]}</h2>;
+  }
+
+  const move = (direction: 'up' | 'down') => {
+    if (!onChange) return;
+    onChange((current) => {
+      const currentLayout = getLayoutDefinition(normalizeLayoutId(current.layoutId));
+      const currentOrder = sectionOrderFromData(current, currentLayout);
+      return {
+        ...current,
+        sectionOrder: moveSectionInOrder(currentOrder, section, direction),
+      };
+    });
+  };
+
+  return (
+    <div className="resume-section-heading-row">
+      <h2 className="section-heading flex-1">{SECTION_LABELS[section]}</h2>
+      <div className="no-print mb-1.5 flex shrink-0 items-center gap-1">
+        <button
+          type="button"
+          onClick={() => move('up')}
+          disabled={index <= 0}
+          className="rounded border border-gray-200 px-2 py-0.5 text-[11px] text-gray-500 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40"
+          aria-label={`Move ${SECTION_LABELS[section]} section up`}
+          title="Move section up"
+        >
+          Up
+        </button>
+        <button
+          type="button"
+          onClick={() => move('down')}
+          disabled={index >= order.length - 1}
+          className="rounded border border-gray-200 px-2 py-0.5 text-[11px] text-gray-500 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40"
+          aria-label={`Move ${SECTION_LABELS[section]} section down`}
+          title="Move section down"
+        >
+          Down
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function SectionActions({
+  section,
+  data,
+  onChange,
+}: {
+  section: SectionKey;
+  data: ResumeData;
   onChange: React.Dispatch<React.SetStateAction<ResumeData>>;
 }) {
   const { isEditing } = useEditMode();
@@ -33,10 +180,12 @@ function SectionActions({
 
   const buttonClass =
     'mt-2 w-full text-sm text-[#8B0000] border border-dashed border-[#8B0000] rounded py-1.5 hover:bg-red-50 transition-colors no-print';
+  const hasSpacer = getSpacerLinesAfter(data.sectionSpacers, section) > 0;
 
+  let addEntryButton: React.ReactNode = null;
   switch (section) {
     case 'experience':
-      return (
+      addEntryButton = (
         <button
           type="button"
           className={buttonClass}
@@ -60,8 +209,9 @@ function SectionActions({
           + Add Experience
         </button>
       );
+      break;
     case 'projects':
-      return (
+      addEntryButton = (
         <button
           type="button"
           className={buttonClass}
@@ -84,8 +234,9 @@ function SectionActions({
           + Add Project
         </button>
       );
+      break;
     case 'education':
-      return (
+      addEntryButton = (
         <button
           type="button"
           className={buttonClass}
@@ -107,8 +258,9 @@ function SectionActions({
           + Add Education
         </button>
       );
+      break;
     case 'certificates':
-      return (
+      addEntryButton = (
         <button
           type="button"
           className={buttonClass}
@@ -130,9 +282,34 @@ function SectionActions({
           + Add Certificate
         </button>
       );
+      break;
     default:
-      return null;
+      break;
   }
+
+  return (
+    <div className="no-print space-y-1.5">
+      {addEntryButton}
+      {!hasSpacer && (
+        <button
+          type="button"
+          className="w-full rounded border border-dashed border-gray-300 py-1 text-[11px] text-gray-500 transition-colors hover:bg-gray-50"
+          onClick={() =>
+            onChange((current) => ({
+              ...current,
+              sectionSpacers: upsertSectionSpacer(
+                current.sectionSpacers,
+                section,
+                MIN_SECTION_SPACER_LINES
+              ),
+            }))
+          }
+        >
+          + Add space below section
+        </button>
+      )}
+    </div>
+  );
 }
 
 export default function FlowBlockRenderer({
@@ -153,11 +330,9 @@ export default function FlowBlockRenderer({
         />
       );
     case 'heading':
-      return (
-        <h2 className="section-heading">
-          {block.section ? SECTION_LABELS[block.section] : ''}
-        </h2>
-      );
+      return block.section ? (
+        <SectionHeadingControls section={block.section} data={data} onChange={onChange} />
+      ) : null;
     case 'about':
       return (
         <AboutMeSection
@@ -167,8 +342,7 @@ export default function FlowBlockRenderer({
         />
       );
     case 'experience': {
-      const items = data.experience.filter((item) => item.id === block.entryId);
-      if (items.length === 0) return null;
+      if (!data.experience.some((item) => item.id === block.entryId)) return null;
       return (
         <ExperienceSection
           items={data.experience}
@@ -225,7 +399,15 @@ export default function FlowBlockRenderer({
       );
     case 'sectionActions':
       return block.section ? (
-        <SectionActions section={block.section} onChange={update} />
+        <SectionActions section={block.section} data={data} onChange={update} />
+      ) : null;
+    case 'spacer':
+      return block.section && block.spacerLines ? (
+        <SectionSpacerBlock
+          section={block.section}
+          lines={block.spacerLines}
+          onChange={onChange}
+        />
       ) : null;
     default:
       return null;

@@ -83,6 +83,32 @@
     letter-spacing: 0.15em;
   }
 
+  .resume-section-spacer {
+    width: 100%;
+  }
+
+  .resume-section-spacer-edit {
+    border: 1px dashed var(--resume-border);
+    border-radius: 4px;
+    background: repeating-linear-gradient(
+      to bottom,
+      transparent,
+      transparent calc(1.25rem - 1px),
+      var(--resume-border) calc(1.25rem - 1px),
+      var(--resume-border) 1.25rem
+    );
+  }
+
+  .resume-section-heading-row {
+    display: flex;
+    align-items: flex-end;
+    gap: 0.5rem;
+  }
+
+  .resume-section-heading-row .section-heading {
+    margin-bottom: 0.375rem;
+  }
+
   .resume-flow-block {
     break-inside: avoid;
     page-break-inside: avoid;

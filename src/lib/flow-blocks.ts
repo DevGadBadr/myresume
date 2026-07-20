@@ -1,5 +1,7 @@
 import type { ResumeLayoutDefinition } from '@/layouts/types';
 import type { ResumeData, SectionKey } from '@/types/resume';
+import { sectionOrderFromData } from '@/lib/section-order';
+import { getSpacerLinesAfter } from '@/lib/section-spacers';
 
 export type FlowBlockKind =
   | 'header'
@@ -10,7 +12,8 @@ export type FlowBlockKind =
   | 'education'
   | 'certificate'
   | 'skills'
-  | 'sectionActions';
+  | 'sectionActions'
+  | 'spacer';
 
 export interface FlowBlock {
   id: string;
@@ -21,6 +24,8 @@ export interface FlowBlock {
   pageBreakBefore?: boolean;
   /** Keep this block with the following block (section headings). */
   keepWithNext?: boolean;
+  /** Spacer height in blank lines. */
+  spacerLines?: number;
 }
 
 function headingId(section: SectionKey) {
@@ -44,6 +49,11 @@ function appendSectionBlocks(
     case 'about':
       blocks.push({ id: headingId('about'), kind: 'heading', section: 'about', keepWithNext: true });
       blocks.push({ id: 'about-body', kind: 'about', section: 'about' });
+      blocks.push({
+        id: actionsId('about'),
+        kind: 'sectionActions',
+        section: 'about',
+      });
       break;
     case 'experience':
       blocks.push({
@@ -141,26 +151,36 @@ function appendSectionBlocks(
         keepWithNext: true,
       });
       blocks.push({ id: 'skills-body', kind: 'skills', section: 'skills' });
+      blocks.push({
+        id: actionsId('skills'),
+        kind: 'sectionActions',
+        section: 'skills',
+      });
       break;
     default:
       break;
   }
 }
 
-/** Build a flat stream of atomic layout blocks in layout section order. */
+/** Build a flat stream of atomic layout blocks using the resume's section order. */
 export function buildFlowBlocks(
   data: ResumeData,
   layout: ResumeLayoutDefinition
 ): FlowBlock[] {
   const blocks: FlowBlock[] = [{ id: 'header', kind: 'header' }];
+  const orderedSections = sectionOrderFromData(data, layout);
 
-  // Single-column stream for reliable Word-like packing (split still paginates in section order).
-  const orderedSections = layout.sections.map((item) => item.section);
-  const seen = new Set<SectionKey>();
   for (const section of orderedSections) {
-    if (seen.has(section)) continue;
-    seen.add(section);
     appendSectionBlocks(blocks, section, data);
+    const spacerLines = getSpacerLinesAfter(data.sectionSpacers, section);
+    if (spacerLines > 0) {
+      blocks.push({
+        id: `spacer-after-${section}`,
+        kind: 'spacer',
+        section,
+        spacerLines,
+      });
+    }
   }
 
   return blocks;

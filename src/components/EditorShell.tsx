@@ -448,13 +448,11 @@ export default function EditorShell({ initialData, canEdit }: EditorShellProps) 
           </>
         )}
 
-        <p className="no-print mt-4 text-center text-xs text-[var(--resume-subtle)]">
-          {canEdit
-            ? workspaceMode === 'templates'
-              ? 'Resume variants are independent from the library. Use Import from library to copy sections. Auto-saved to MongoDB.'
-              : 'Library holds master content for importing into resumes. PDF uses the active resume. Auto-saved to MongoDB.'
-            : 'Read-only mode. Sign in as the owner to edit this resume.'}
-        </p>
+        {!canEdit && (
+          <p className="no-print mt-4 text-center text-xs text-[var(--resume-subtle)]">
+            Read-only mode. Sign in as the owner to edit this resume.
+          </p>
+        )}
       </div>
     </EditModeContext.Provider>
   );

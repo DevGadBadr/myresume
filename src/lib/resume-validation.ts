@@ -9,6 +9,8 @@ import {
 } from '@/lib/template-content';
 import { normalizeLayoutSettings } from '@/lib/layout-settings';
 import { normalizeLayoutId } from '@/layouts';
+import { readSectionOrder } from '@/lib/section-order';
+import { normalizeSectionSpacers } from '@/lib/section-spacers';
 import type {
   CertEntry,
   ContactLink,
@@ -355,6 +357,16 @@ function readLegacyResumeTemplate(value: unknown, path: string): LegacyResumeTem
     template.layoutId = normalizeLayoutId(record.layoutId);
   }
 
+  const sectionOrder = readSectionOrder(record.sectionOrder);
+  if (sectionOrder) {
+    template.sectionOrder = sectionOrder;
+  }
+
+  const sectionSpacers = normalizeSectionSpacers(record.sectionSpacers);
+  if (sectionSpacers) {
+    template.sectionSpacers = sectionSpacers;
+  }
+
   if (record.content !== undefined) {
     template.content = readTemplateContent(record.content, `${path}.content`);
   }
@@ -458,6 +470,16 @@ export function normalizeResumeData(value: unknown): ResumeData {
     activeTemplateId,
     layoutId: normalizeLayoutId(record.layoutId),
   };
+
+  const sectionOrder = readSectionOrder(record.sectionOrder);
+  if (sectionOrder) {
+    resume.sectionOrder = sectionOrder;
+  }
+
+  const sectionSpacers = normalizeSectionSpacers(record.sectionSpacers);
+  if (sectionSpacers) {
+    resume.sectionSpacers = sectionSpacers;
+  }
 
   if (record.layout !== undefined) {
     resume.layout = readLayout(record.layout);

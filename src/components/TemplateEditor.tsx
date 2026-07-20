@@ -91,6 +91,9 @@ export default function TemplateEditor({
             item.id === template.id
               ? {
                   ...item,
+                  sectionOrder: nextAssembled.sectionOrder,
+                  sectionSpacers: nextAssembled.sectionSpacers,
+                  layoutId: nextAssembled.layoutId,
                   content: {
                     about: nextAssembled.about,
                     experience: nextAssembled.experience,
@@ -136,6 +139,8 @@ export default function TemplateEditor({
       name,
       hideContactInfo: false,
       layoutId: normalizeLayoutId(data.layoutId),
+      sectionOrder: data.sectionOrder ? [...data.sectionOrder] : undefined,
+      sectionSpacers: data.sectionSpacers?.map((item) => ({ ...item })),
       content: deepCloneContent(data),
     };
 

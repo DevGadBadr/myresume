@@ -84,6 +84,13 @@ const ResumeSchema = new Schema<ResumeDocument>(
     ],
     activeTemplateId: { type: String, required: false },
     layoutId: { type: String, enum: ['classic', 'split', 'compact'], required: false },
+    sectionOrder: [{ type: String, required: false }],
+    sectionSpacers: [
+      {
+        afterSection: { type: String, required: true },
+        lines: { type: Number, required: true },
+      },
+    ],
     layout: {
       controls: [
         {
@@ -108,6 +115,13 @@ const ResumeSchema = new Schema<ResumeDocument>(
         targetTitle: { type: String, required: false },
         hideContactInfo: { type: Boolean, required: true, default: false },
         layoutId: { type: String, enum: ['classic', 'split', 'compact'], required: false },
+        sectionOrder: [{ type: String, required: false }],
+        sectionSpacers: [
+          {
+            afterSection: { type: String, required: true },
+            lines: { type: Number, required: true },
+          },
+        ],
         content: {
           about: { type: String, required: true },
           experience: [
