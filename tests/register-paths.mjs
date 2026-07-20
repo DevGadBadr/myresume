@@ -1,4 +1,4 @@
-import { existsSync } from 'node:fs';
+import { existsSync, statSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { registerHooks } from 'node:module';
@@ -9,14 +9,21 @@ const srcRoot = resolve(projectRoot, 'src');
 function resolveAlias(specifier) {
   const basePath = resolve(srcRoot, specifier.slice(2));
   const candidates = [
-    basePath,
     `${basePath}.ts`,
     `${basePath}.tsx`,
     resolve(basePath, 'index.ts'),
     resolve(basePath, 'index.tsx'),
+    basePath,
   ];
 
-  const match = candidates.find((candidate) => existsSync(candidate));
+  const match = candidates.find((candidate) => {
+    if (!existsSync(candidate)) return false;
+    try {
+      return statSync(candidate).isFile();
+    } catch {
+      return false;
+    }
+  });
   return match ? pathToFileURL(match).href : null;
 }
 

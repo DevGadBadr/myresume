@@ -4,7 +4,7 @@ import type { ReactNode } from 'react';
 import type { ProjectEntry } from '@/types/resume';
 import { useEditMode } from '@/context/EditModeContext';
 import EditableText from '@/components/EditableText';
-import SortableBullet from '@/components/SortableBullet';
+import WordLikeBulletList from '@/components/editor/WordLikeBulletList';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import {
@@ -159,31 +159,6 @@ export default function ProjectsSection({
     }
   };
 
-  const handleBulletDragEnd = (itemIdx: number, event: DragEndEvent) => {
-    const { active, over } = event;
-    if (!over || active.id === over.id) return;
-    const bullets = items[itemIdx].bullets;
-    const oldIdx = bullets.findIndex((_, i) => `${items[itemIdx].id}-b-${i}` === active.id);
-    const newIdx = bullets.findIndex((_, i) => `${items[itemIdx].id}-b-${i}` === over.id);
-    if (oldIdx !== -1 && newIdx !== -1) {
-      updateItem(itemIdx, { bullets: arrayMove(bullets, oldIdx, newIdx) });
-    }
-  };
-
-  const updateBullet = (itemIdx: number, bulletIdx: number, val: string) => {
-    const bullets = [...items[itemIdx].bullets];
-    bullets[bulletIdx] = val;
-    updateItem(itemIdx, { bullets });
-  };
-
-  const addBullet = (itemIdx: number) => {
-    updateItem(itemIdx, { bullets: [...items[itemIdx].bullets, 'Key achievement or feature'] });
-  };
-
-  const removeBullet = (itemIdx: number, bulletIdx: number) => {
-    updateItem(itemIdx, { bullets: items[itemIdx].bullets.filter((_, i) => i !== bulletIdx) });
-  };
-
   const updateTag = (itemIdx: number, tagIdx: number, val: string) => {
     const tags = [...items[itemIdx].tags];
     tags[tagIdx] = val;
@@ -225,7 +200,6 @@ export default function ProjectsSection({
           <div className="space-y-5">
             {visibleItems.map((item, i) => {
               const sourceIndex = items.findIndex((entry) => entry.id === item.id);
-              const bulletIds = item.bullets.map((_, bi) => `${item.id}-b-${bi}`);
               const deploymentCredentials = item.deployment?.credentials ?? [];
               const hasDeploymentDetails =
                 Boolean(item.deployment?.url) ||
@@ -233,8 +207,11 @@ export default function ProjectsSection({
 
               return (
                 <SortableProjectCard key={item.id} id={item.id} isEditing={isEditing && showListActions}>
+                  <div
+                    className={`resume-entry ${item.pageBreakBefore ? 'resume-page-break-before' : ''}`}
+                  >
                   {isEditing && showListActions && (
-                    <div className="mb-2 flex items-center justify-between gap-2">
+                    <div className="mb-2 flex items-center justify-between gap-2 no-print">
                       <div className="flex items-center gap-2 text-[11px] text-gray-400">
                         <button
                           type="button"
@@ -256,8 +233,21 @@ export default function ProjectsSection({
                         >
                           Down
                         </button>
+                        <label className="flex items-center gap-1">
+                          <input
+                            type="checkbox"
+                            checked={Boolean(item.pageBreakBefore)}
+                            onChange={(e) =>
+                              updateItem(sourceIndex, {
+                                pageBreakBefore: e.target.checked ? true : undefined,
+                              })
+                            }
+                          />
+                          Page break before
+                        </label>
                       </div>
                       <button
+                        type="button"
                         onClick={() => removeItem(sourceIndex)}
                         aria-label={`Remove project ${item.title}`}
                         className="z-10 flex h-6 w-6 items-center justify-center rounded-full bg-red-100 text-xs text-red-500 opacity-0 transition-opacity hover:bg-red-200 group-hover:opacity-100"
@@ -323,34 +313,22 @@ export default function ProjectsSection({
                       )}
                     </div>
 
-                    <DndContext
-                      sensors={sensors}
-                      collisionDetection={closestCenter}
-                      onDragEnd={(e) => handleBulletDragEnd(sourceIndex, e)}
-                    >
-                      <SortableContext items={bulletIds} strategy={verticalListSortingStrategy}>
-                        <ul className="mt-2 space-y-1 pl-3">
-                          {item.bullets.map((bullet, bi) => (
-                            <SortableBullet
-                              key={bulletIds[bi]}
-                              id={bulletIds[bi]}
-                              value={bullet}
-                              isEditing={isEditing}
-                              onChange={(v) => updateBullet(sourceIndex, bi, v)}
-                              onRemove={() => removeBullet(sourceIndex, bi)}
-                            />
-                          ))}
-                        </ul>
-                      </SortableContext>
-                    </DndContext>
-
-                    {isEditing && (
-                      <button
-                        onClick={() => addBullet(sourceIndex)}
-                        className="mt-1.5 ml-4 text-xs text-[#8B0000] hover:underline"
-                      >
-                        + Add bullet
-                      </button>
+                    {isEditing ? (
+                      <WordLikeBulletList
+                        bullets={item.bullets}
+                        onChange={(bullets) => updateItem(sourceIndex, { bullets })}
+                      />
+                    ) : (
+                      <ul className="mt-2 space-y-1 pl-3">
+                        {item.bullets.map((bullet, bi) => (
+                          <li key={bi} className="flex items-start gap-2 text-xs text-gray-700">
+                            <span className="text-[#8B0000] mt-0.5 shrink-0">•</span>
+                            <span className="flex-1 leading-relaxed whitespace-pre-wrap">
+                              {bullet}
+                            </span>
+                          </li>
+                        ))}
+                      </ul>
                     )}
 
                     {isEditing && (
@@ -480,6 +458,7 @@ export default function ProjectsSection({
                   </div>
 
                   {i < visibleItems.length - 1 && <hr className="mt-4 border-dashed border-gray-200" />}
+                  </div>
                 </SortableProjectCard>
               );
             })}

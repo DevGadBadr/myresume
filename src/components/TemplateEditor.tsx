@@ -1,8 +1,10 @@
 'use client';
 
 import { useCallback } from 'react';
-import type { ResumeData, ResumeTemplate, ResumeTemplateContent } from '@/types/resume';
-import PaginatedResume from '@/components/PaginatedResume';
+import type { ResumeData, ResumeLayoutId, ResumeTemplate, ResumeTemplateContent } from '@/types/resume';
+import { RESUME_LAYOUT_IDS } from '@/types/resume';
+import ResumeFlowDocument from '@/components/ResumeFlowDocument';
+import { RESUME_LAYOUTS, normalizeLayoutId } from '@/layouts';
 import {
   assembleTemplateResume,
   deepCloneContent,
@@ -133,6 +135,7 @@ export default function TemplateEditor({
       id,
       name,
       hideContactInfo: false,
+      layoutId: normalizeLayoutId(data.layoutId),
       content: deepCloneContent(data),
     };
 
@@ -213,7 +216,7 @@ export default function TemplateEditor({
 
         <div className="space-y-3 border-b border-gray-200 pb-4">
           <label className="block text-xs font-semibold text-gray-600">
-            Template name
+            Resume name
             <input
               value={template.name}
               onChange={(event) => updateTemplate(template.id, { name: event.target.value })}
@@ -239,8 +242,28 @@ export default function TemplateEditor({
                 updateTemplate(template.id, { hideContactInfo: event.target.checked })
               }
             />
-            Hide contact information in this template
+            Hide contact information in this resume
           </label>
+          <div>
+            <p className="text-xs font-semibold text-gray-600">Layout</p>
+            <div className="mt-1.5 flex flex-wrap gap-1.5">
+              {RESUME_LAYOUT_IDS.map((id) => (
+                <button
+                  key={id}
+                  type="button"
+                  onClick={() => updateTemplate(template.id, { layoutId: id as ResumeLayoutId })}
+                  className={`rounded border px-2 py-1 text-xs ${
+                    normalizeLayoutId(template.layoutId ?? data.layoutId) === id
+                      ? 'border-gray-900 bg-gray-900 text-white'
+                      : 'border-gray-200 text-gray-700 hover:bg-gray-50'
+                  }`}
+                  title={RESUME_LAYOUTS[id].description}
+                >
+                  {RESUME_LAYOUTS[id].name}
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
 
         <div className="mt-4 space-y-2">
@@ -267,12 +290,13 @@ export default function TemplateEditor({
       </aside>
 
       <div>
-        <PaginatedResume
+        <ResumeFlowDocument
           data={previewData}
           onChange={handleTemplateResumeChange}
           hideContactInfo={template.hideContactInfo}
           showPageGaps
           showShadow
+          layoutId={template.layoutId ?? data.layoutId}
         />
       </div>
     </div>

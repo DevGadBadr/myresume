@@ -2,7 +2,7 @@
 
 import type { ResumeData } from '@/types/resume';
 import { EditModeContext } from '@/context/EditModeContext';
-import PaginatedResume from '@/components/PaginatedResume';
+import ResumeFlowDocument from '@/components/ResumeFlowDocument';
 import type { ColorTheme } from '@/lib/theme';
 
 const noop = () => {};
@@ -17,7 +17,12 @@ export default function PrintContent({ data, hideContactInfo = false, theme }: P
   return (
     <EditModeContext.Provider value={{ isEditing: false, toggle: noop }}>
       <div data-theme={theme}>
-        <PaginatedResume data={data} hideContactInfo={hideContactInfo} printMode />
+        <ResumeFlowDocument
+          data={data}
+          hideContactInfo={hideContactInfo}
+          printMode
+          layoutId={data.layoutId}
+        />
       </div>
     </EditModeContext.Provider>
   );

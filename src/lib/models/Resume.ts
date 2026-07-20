@@ -32,6 +32,7 @@ const ResumeSchema = new Schema<ResumeDocument>(
         company: { type: String, required: true },
         period: { type: String, required: true },
         bullets: [{ type: String, required: true }],
+        pageBreakBefore: { type: Boolean, required: false },
       },
     ],
     projects: [
@@ -41,6 +42,7 @@ const ResumeSchema = new Schema<ResumeDocument>(
         description: { type: String, required: true },
         bullets: [{ type: String, required: true }],
         tags: [{ type: String, required: true }],
+        pageBreakBefore: { type: Boolean, required: false },
         deployment: {
           url: { type: String, required: false },
           credentials: [
@@ -66,6 +68,7 @@ const ResumeSchema = new Schema<ResumeDocument>(
         degree: { type: String, required: true },
         institution: { type: String, required: true },
         period: { type: String, required: true },
+        pageBreakBefore: { type: Boolean, required: false },
       },
     ],
     certificates: [
@@ -76,9 +79,11 @@ const ResumeSchema = new Schema<ResumeDocument>(
         date: { type: String, required: true },
         hours: { type: String, required: false },
         link: { type: String, required: false },
+        pageBreakBefore: { type: Boolean, required: false },
       },
     ],
     activeTemplateId: { type: String, required: false },
+    layoutId: { type: String, enum: ['classic', 'split', 'compact'], required: false },
     layout: {
       controls: [
         {
@@ -89,6 +94,12 @@ const ResumeSchema = new Schema<ResumeDocument>(
         },
       ],
       sections: { type: Schema.Types.Mixed, required: false },
+      pageMargins: {
+        top: { type: Number, required: false },
+        right: { type: Number, required: false },
+        bottom: { type: Number, required: false },
+        left: { type: Number, required: false },
+      },
     },
     templates: [
       {
@@ -96,6 +107,7 @@ const ResumeSchema = new Schema<ResumeDocument>(
         name: { type: String, required: true },
         targetTitle: { type: String, required: false },
         hideContactInfo: { type: Boolean, required: true, default: false },
+        layoutId: { type: String, enum: ['classic', 'split', 'compact'], required: false },
         content: {
           about: { type: String, required: true },
           experience: [
@@ -106,6 +118,7 @@ const ResumeSchema = new Schema<ResumeDocument>(
               company: { type: String, required: true },
               period: { type: String, required: true },
               bullets: [{ type: String, required: true }],
+              pageBreakBefore: { type: Boolean, required: false },
             },
           ],
           projects: [
@@ -115,6 +128,7 @@ const ResumeSchema = new Schema<ResumeDocument>(
               description: { type: String, required: true },
               bullets: [{ type: String, required: true }],
               tags: [{ type: String, required: true }],
+              pageBreakBefore: { type: Boolean, required: false },
               deployment: {
                 url: { type: String, required: false },
                 credentials: [
@@ -140,6 +154,7 @@ const ResumeSchema = new Schema<ResumeDocument>(
               degree: { type: String, required: true },
               institution: { type: String, required: true },
               period: { type: String, required: true },
+              pageBreakBefore: { type: Boolean, required: false },
             },
           ],
           certificates: [
@@ -150,6 +165,7 @@ const ResumeSchema = new Schema<ResumeDocument>(
               date: { type: String, required: true },
               hours: { type: String, required: false },
               link: { type: String, required: false },
+              pageBreakBefore: { type: Boolean, required: false },
             },
           ],
           layout: {
@@ -162,6 +178,12 @@ const ResumeSchema = new Schema<ResumeDocument>(
               },
             ],
             sections: { type: Schema.Types.Mixed, required: false },
+            pageMargins: {
+              top: { type: Number, required: false },
+              right: { type: Number, required: false },
+              bottom: { type: Number, required: false },
+              left: { type: Number, required: false },
+            },
           },
         },
       },

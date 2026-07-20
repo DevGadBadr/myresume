@@ -82,6 +82,106 @@
     margin-bottom: 0.375rem;
     letter-spacing: 0.15em;
   }
+
+  .resume-flow-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+    margin-top: 1.25rem;
+  }
+
+  .resume-flow-split {
+    display: grid;
+    grid-template-columns: minmax(0, 1.55fr) 1px minmax(0, 1fr);
+    column-gap: 0.9rem;
+    margin-top: 1.25rem;
+    align-items: start;
+  }
+
+  .resume-flow-column {
+    display: flex;
+    flex-direction: column;
+    gap: 1.1rem;
+    min-width: 0;
+  }
+
+  .resume-flow-v-rule {
+    width: 1px;
+    background: var(--resume-accent);
+    opacity: 0.5;
+    align-self: stretch;
+    min-height: 8rem;
+  }
+
+  .layout-compact .resume-flow-stack {
+    gap: 0.75rem;
+  }
+
+  .layout-compact .section-heading {
+    font-size: 0.7rem;
+    margin-bottom: 0.25rem;
+    padding-bottom: 0.15rem;
+  }
+
+  .layout-compact .resume-flow-section {
+    font-size: 0.92em;
+  }
+
+  .resume-entry {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  .resume-page-break-before {
+    break-before: page;
+    page-break-before: always;
+  }
+
+  /* TipTap Word-like editors */
+  .word-like-editor .ProseMirror,
+  .word-like-bullets .ProseMirror {
+    outline: none;
+    min-height: 1.25em;
+  }
+
+  .word-like-editor .ProseMirror p,
+  .word-like-bullets .ProseMirror p {
+    margin: 0;
+  }
+
+  .word-like-editor .ProseMirror.ProseMirror-focused,
+  .word-like-bullets .ProseMirror.ProseMirror-focused {
+    border-bottom: 1px dashed var(--resume-accent);
+  }
+
+  .word-like-bullets .ProseMirror ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  .word-like-bullets .ProseMirror li {
+    position: relative;
+    padding-left: 0.85rem;
+    margin: 0.2rem 0;
+  }
+
+  .word-like-bullets .ProseMirror li::before {
+    content: '•';
+    position: absolute;
+    left: 0;
+    color: var(--resume-accent);
+  }
+
+  .word-like-editor .ProseMirror p.is-editor-empty:first-child::before,
+  .word-like-bullets .ProseMirror p.is-editor-empty:first-child::before,
+  .word-like-bullets .ProseMirror li:first-child p.is-editor-empty::before {
+    color: var(--resume-subtle);
+    content: attr(data-placeholder);
+    float: left;
+    height: 0;
+    pointer-events: none;
+  }
 }
 
 .bg-white {
@@ -211,32 +311,29 @@
   margin: 0;
 }
 
-/* Print styles */
+/* Print styles — continuous document flow */
 @media print {
   body {
-    background: var(--resume-app-bg) !important;
+    background: white !important;
   }
 
-  .resume-pages-print {
-    width: 210mm;
-    margin: 0 auto;
+  .resume-flow-print,
+  .resume-flow-print-content {
+    width: 210mm !important;
+    margin: 0 auto !important;
+    box-shadow: none !important;
+    border: none !important;
+    min-height: auto !important;
   }
 
-  .resume-page {
-    break-after: page;
-    break-inside: avoid;
-    page-break-after: always;
-    page-break-inside: avoid;
-  }
-
-  .resume-page:last-child {
-    break-after: auto;
-    page-break-after: auto;
-  }
-
-  .relative.group {
+  .resume-entry {
     break-inside: avoid;
     page-break-inside: avoid;
+  }
+
+  .resume-page-break-before {
+    break-before: page;
+    page-break-before: always;
   }
 
   h2,

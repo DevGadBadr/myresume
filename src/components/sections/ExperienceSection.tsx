@@ -3,20 +3,7 @@
 import type { ExperienceEntry } from '@/types/resume';
 import { useEditMode } from '@/context/EditModeContext';
 import EditableText from '@/components/EditableText';
-import SortableBullet from '@/components/SortableBullet';
-import {
-  DndContext,
-  closestCenter,
-  PointerSensor,
-  useSensor,
-  useSensors,
-  DragEndEvent,
-} from '@dnd-kit/core';
-import {
-  SortableContext,
-  verticalListSortingStrategy,
-  arrayMove,
-} from '@dnd-kit/sortable';
+import WordLikeBulletList from '@/components/editor/WordLikeBulletList';
 
 interface ExperienceSectionProps {
   items: ExperienceEntry[];
@@ -35,37 +22,8 @@ export default function ExperienceSection({
 }: ExperienceSectionProps) {
   const { isEditing } = useEditMode();
 
-  const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 6 } })
-  );
-
   const updateItem = (i: number, patch: Partial<ExperienceEntry>) => {
     onChange(items.map((item, idx) => (idx === i ? { ...item, ...patch } : item)));
-  };
-
-  const handleBulletDragEnd = (itemIdx: number, event: DragEndEvent) => {
-    const { active, over } = event;
-    if (!over || active.id === over.id) return;
-    const bullets = items[itemIdx].bullets;
-    const oldIdx = bullets.findIndex((_, i) => `${items[itemIdx].id}-b-${i}` === active.id);
-    const newIdx = bullets.findIndex((_, i) => `${items[itemIdx].id}-b-${i}` === over.id);
-    if (oldIdx !== -1 && newIdx !== -1) {
-      updateItem(itemIdx, { bullets: arrayMove(bullets, oldIdx, newIdx) });
-    }
-  };
-
-  const updateBullet = (itemIdx: number, bulletIdx: number, val: string) => {
-    const bullets = [...items[itemIdx].bullets];
-    bullets[bulletIdx] = val;
-    updateItem(itemIdx, { bullets });
-  };
-
-  const addBullet = (itemIdx: number) => {
-    updateItem(itemIdx, { bullets: [...items[itemIdx].bullets, 'New achievement or responsibility'] });
-  };
-
-  const removeBullet = (itemIdx: number, bulletIdx: number) => {
-    updateItem(itemIdx, { bullets: items[itemIdx].bullets.filter((_, i) => i !== bulletIdx) });
   };
 
   const addItem = () => {
@@ -94,22 +52,39 @@ export default function ExperienceSection({
       <div className="space-y-5">
         {visibleItems.map((item, i) => {
           const sourceIndex = items.findIndex((entry) => entry.id === item.id);
-          const bulletIds = item.bullets.map((_, bi) => `${item.id}-b-${bi}`);
           return (
-            <div key={item.id} className="relative group">
+            <div
+              key={item.id}
+              className={`resume-entry relative group ${item.pageBreakBefore ? 'resume-page-break-before' : ''}`}
+            >
               {isEditing && showListActions && (
-                <button
-                  onClick={() => removeItem(sourceIndex)}
-                  aria-label={`Remove experience ${item.role}`}
-                  className="absolute -right-1 -top-1 z-10 w-6 h-6 flex items-center justify-center bg-red-100 text-red-500 rounded-full text-xs opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-200"
-                  title="Remove entry"
-                >
-                  ×
-                </button>
+                <div className="mb-1 flex items-center justify-end gap-2 no-print">
+                  <label className="flex items-center gap-1 text-[10px] text-gray-400">
+                    <input
+                      type="checkbox"
+                      checked={Boolean(item.pageBreakBefore)}
+                      onChange={(e) =>
+                        updateItem(sourceIndex, {
+                          pageBreakBefore: e.target.checked ? true : undefined,
+                        })
+                      }
+                    />
+                    Page break before
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => removeItem(sourceIndex)}
+                    aria-label={`Remove experience ${item.role}`}
+                    className="z-10 flex h-6 w-6 items-center justify-center rounded-full bg-red-100 text-xs text-red-500 opacity-0 transition-opacity hover:bg-red-200 group-hover:opacity-100"
+                    title="Remove entry"
+                  >
+                    ×
+                  </button>
+                </div>
               )}
 
               <div className="flex items-start justify-between gap-2 mb-0.5">
-                <div className="flex-1">
+                <div className="flex-1 min-w-0">
                   <EditableText
                     value={item.role}
                     onChange={(v) => updateItem(sourceIndex, { role: v })}
@@ -141,34 +116,20 @@ export default function ExperienceSection({
                 </div>
               </div>
 
-              <DndContext
-                sensors={sensors}
-                collisionDetection={closestCenter}
-                onDragEnd={(e) => handleBulletDragEnd(sourceIndex, e)}
-              >
-                <SortableContext items={bulletIds} strategy={verticalListSortingStrategy}>
-                  <ul className="mt-1.5 space-y-1 pl-3">
-                    {item.bullets.map((bullet, bi) => (
-                      <SortableBullet
-                        key={bulletIds[bi]}
-                        id={bulletIds[bi]}
-                        value={bullet}
-                        isEditing={isEditing}
-                        onChange={(v) => updateBullet(sourceIndex, bi, v)}
-                        onRemove={() => removeBullet(sourceIndex, bi)}
-                      />
-                    ))}
-                  </ul>
-                </SortableContext>
-              </DndContext>
-
-              {isEditing && showListActions && (
-                <button
-                  onClick={() => addBullet(sourceIndex)}
-                  className="mt-1.5 ml-4 text-xs text-[#8B0000] hover:underline"
-                >
-                  + Add bullet
-                </button>
+              {isEditing ? (
+                <WordLikeBulletList
+                  bullets={item.bullets}
+                  onChange={(bullets) => updateItem(sourceIndex, { bullets })}
+                />
+              ) : (
+                <ul className="mt-1.5 space-y-1 pl-3">
+                  {item.bullets.map((bullet, bi) => (
+                    <li key={bi} className="flex items-start gap-2 text-xs text-gray-700">
+                      <span className="text-[#8B0000] mt-0.5 shrink-0">•</span>
+                      <span className="flex-1 leading-relaxed whitespace-pre-wrap">{bullet}</span>
+                    </li>
+                  ))}
+                </ul>
               )}
 
               {i < visibleItems.length - 1 && <hr className="mt-4 border-dashed border-gray-200" />}
@@ -179,8 +140,9 @@ export default function ExperienceSection({
 
       {isEditing && showListActions && (
         <button
+          type="button"
           onClick={addItem}
-          className="mt-4 w-full text-sm text-[#8B0000] border border-dashed border-[#8B0000] rounded py-1.5 hover:bg-red-50 transition-colors"
+          className="mt-4 w-full text-sm text-[#8B0000] border border-dashed border-[#8B0000] rounded py-1.5 hover:bg-red-50 transition-colors no-print"
         >
           + Add Experience
         </button>

@@ -12,6 +12,12 @@ export interface PersonalInfo {
   links: ContactLink[];
 }
 
+export type ResumeLayoutId = 'classic' | 'split' | 'compact';
+
+export const RESUME_LAYOUT_IDS: ResumeLayoutId[] = ['classic', 'split', 'compact'];
+
+export const DEFAULT_RESUME_LAYOUT_ID: ResumeLayoutId = 'classic';
+
 export interface ExperienceEntry {
   id: string;
   role: string;
@@ -19,6 +25,8 @@ export interface ExperienceEntry {
   company: string;
   period: string;
   bullets: string[];
+  /** Force this entry onto the next printed page. */
+  pageBreakBefore?: boolean;
 }
 
 export interface ProjectCredentialField {
@@ -39,6 +47,7 @@ export interface ProjectEntry {
   bullets: string[];
   tags: string[];
   deployment?: ProjectDeployment;
+  pageBreakBefore?: boolean;
 }
 
 export interface EducationEntry {
@@ -46,6 +55,7 @@ export interface EducationEntry {
   degree: string;
   institution: string;
   period: string;
+  pageBreakBefore?: boolean;
 }
 
 export interface CertEntry {
@@ -55,6 +65,7 @@ export interface CertEntry {
   date: string;
   hours?: string;
   link?: string;
+  pageBreakBefore?: boolean;
 }
 
 export interface SkillEntry {
@@ -123,6 +134,8 @@ export interface ResumeTemplate {
   name: string;
   targetTitle?: string;
   hideContactInfo: boolean;
+  /** Visual layout theme for this resume variant. */
+  layoutId?: ResumeLayoutId;
   content: ResumeTemplateContent;
 }
 
@@ -136,5 +149,7 @@ export interface ResumeData {
   certificates: CertEntry[];
   templates: ResumeTemplate[];
   activeTemplateId?: string;
+  /** Default visual layout when editing the library body. */
+  layoutId?: ResumeLayoutId;
   layout?: ResumeLayoutSettings;
 }

@@ -47,15 +47,33 @@ export default function EducationSection({
         {visibleItems.map((item, i) => {
           const sourceIndex = items.findIndex((entry) => entry.id === item.id);
           return (
-          <div key={item.id} className="relative group">
+          <div
+            key={item.id}
+            className={`resume-entry relative group ${item.pageBreakBefore ? 'resume-page-break-before' : ''}`}
+          >
             {isEditing && showListActions && (
-              <button
-                onClick={() => removeItem(sourceIndex)}
-                aria-label={`Remove education ${item.degree}`}
-                className="absolute -right-1 -top-1 z-10 w-5 h-5 flex items-center justify-center bg-red-100 text-red-500 rounded-full text-xs opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-200"
-              >
-                ×
-              </button>
+              <div className="mb-1 flex items-center justify-end gap-2 no-print">
+                <label className="flex items-center gap-1 text-[10px] text-gray-400">
+                  <input
+                    type="checkbox"
+                    checked={Boolean(item.pageBreakBefore)}
+                    onChange={(e) =>
+                      updateItem(sourceIndex, {
+                        pageBreakBefore: e.target.checked ? true : undefined,
+                      })
+                    }
+                  />
+                  Page break before
+                </label>
+                <button
+                  type="button"
+                  onClick={() => removeItem(sourceIndex)}
+                  aria-label={`Remove education ${item.degree}`}
+                  className="z-10 flex h-5 w-5 items-center justify-center rounded-full bg-red-100 text-xs text-red-500 opacity-0 transition-opacity hover:bg-red-200 group-hover:opacity-100"
+                >
+                  ×
+                </button>
+              </div>
             )}
             <EditableText
               value={item.degree}

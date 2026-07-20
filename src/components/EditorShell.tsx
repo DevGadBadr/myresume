@@ -12,9 +12,11 @@ const EDITOR_SHELL_MAX_WIDTH = `calc(${PAGE_WIDTH_MM}mm + 8rem)`;
 const EDITOR_TEMPLATES_MAX_WIDTH = 'min(100%, 1320px)';
 import { tryNormalizeResumeData } from '@/lib/resume-validation';
 import { DEFAULT_COLOR_THEME, normalizeColorTheme, type ColorTheme } from '@/lib/theme';
-import PaginatedResume from '@/components/PaginatedResume';
+import ResumeFlowDocument from '@/components/ResumeFlowDocument';
 import TemplateEditor from '@/components/TemplateEditor';
 import { DEFAULT_TEMPLATE_ID } from '@/lib/resume-template';
+import { normalizeLayoutId, RESUME_LAYOUTS } from '@/layouts';
+import { RESUME_LAYOUT_IDS, type ResumeLayoutId } from '@/types/resume';
 
 type SaveStatus = 'idle' | 'dirty' | 'saving' | 'saved' | 'error';
 type WorkspaceMode = 'main' | 'templates';
@@ -208,7 +210,10 @@ export default function EditorShell({ initialData, canEdit }: EditorShellProps) 
 
     setPdfLoading(true);
     try {
-      const templateId = workspaceMode === 'templates' ? activeTemplateId : DEFAULT_TEMPLATE_ID;
+      const templateId =
+        workspaceMode === 'templates'
+          ? activeTemplateId
+          : (data.activeTemplateId ?? DEFAULT_TEMPLATE_ID);
       const templateName =
         data.templates.find((template) => template.id === templateId)?.name ?? 'resume';
       const res = await fetch(`${APP_BASE_PATH}/api/pdf`, {
@@ -239,7 +244,11 @@ export default function EditorShell({ initialData, canEdit }: EditorShellProps) 
     } finally {
       setPdfLoading(false);
     }
-  }, [activeTemplateId, data.templates, pdfLoading, theme, workspaceMode]);
+  }, [activeTemplateId, data.activeTemplateId, data.templates, pdfLoading, theme, workspaceMode]);
+
+  const handleLibraryLayoutChange = useCallback((nextLayoutId: ResumeLayoutId) => {
+    setData((current) => ({ ...current, layoutId: nextLayoutId }));
+  }, []);
 
   const handleLogout = useCallback(async () => {
     setLogoutLoading(true);
@@ -334,7 +343,7 @@ export default function EditorShell({ initialData, canEdit }: EditorShellProps) 
                     workspaceMode === 'templates' ? 'bg-[var(--resume-text)] text-[var(--resume-paper)]' : 'text-[var(--resume-muted)]'
                   }`}
                 >
-                  Templates
+                  Resumes
                 </button>
               </div>
             )}
@@ -357,8 +366,8 @@ export default function EditorShell({ initialData, canEdit }: EditorShellProps) 
               {pdfLoading
                 ? 'Generating...'
                 : workspaceMode === 'templates'
-                  ? 'Download Template PDF'
-                  : 'Download Default Template PDF'}
+                  ? 'Download Resume PDF'
+                  : 'Download PDF'}
             </button>
 
             {canEdit ? (
@@ -406,19 +415,44 @@ export default function EditorShell({ initialData, canEdit }: EditorShellProps) 
             onChange={setData}
           />
         ) : (
-          <PaginatedResume
-            data={data}
-            onChange={setData}
-            showPageGaps
-            showShadow
-          />
+          <>
+            {canEdit && editEnabled && (
+              <div className="no-print mb-4 flex flex-wrap items-center gap-2">
+                <span className="text-xs font-semibold uppercase tracking-wider text-[var(--resume-muted)]">
+                  Layout
+                </span>
+                {RESUME_LAYOUT_IDS.map((id) => (
+                  <button
+                    key={id}
+                    type="button"
+                    onClick={() => handleLibraryLayoutChange(id)}
+                    className={`rounded border px-2.5 py-1 text-xs transition-colors ${
+                      normalizeLayoutId(data.layoutId) === id
+                        ? 'border-[var(--resume-text)] bg-[var(--resume-text)] text-[var(--resume-paper)]'
+                        : 'border-[var(--resume-border)] text-[var(--resume-muted)] hover:bg-[var(--resume-hover)]'
+                    }`}
+                    title={RESUME_LAYOUTS[id].description}
+                  >
+                    {RESUME_LAYOUTS[id].name}
+                  </button>
+                ))}
+              </div>
+            )}
+            <ResumeFlowDocument
+              data={data}
+              onChange={setData}
+              showPageGaps
+              showShadow
+              layoutId={data.layoutId}
+            />
+          </>
         )}
 
         <p className="no-print mt-4 text-center text-xs text-[var(--resume-subtle)]">
           {canEdit
             ? workspaceMode === 'templates'
-              ? 'Template edits are independent from the library. Use Import from library to copy sections. Auto-saved to MongoDB.'
-              : 'Library holds master content for importing into templates. Public view and PDF default use the default template. Auto-saved to MongoDB.'
+              ? 'Resume variants are independent from the library. Use Import from library to copy sections. Auto-saved to MongoDB.'
+              : 'Library holds master content for importing into resumes. PDF uses the active resume. Auto-saved to MongoDB.'
             : 'Read-only mode. Sign in as the owner to edit this resume.'}
         </p>
       </div>

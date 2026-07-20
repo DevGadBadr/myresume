@@ -28,12 +28,13 @@ When you use the provided `docker-compose.yml`, the Mongo container reads `.env.
 - `npm run test`: run the Node test suite.
 - `npm run build`: create a production build.
 
-## Auth and Editing
+## Editing Model
 
-- The main resume page is public and read-only by default.
-- Owner editing requires logging in at `/myresume/login`.
-- Resume writes are validated and require an authenticated session.
-- Failed autosaves keep a local browser draft so work can be recovered.
+- Structured sections (experience, projects, certificates, etc.) with Word-like typing inside text fields and bullets (Enter adds a line or bullet).
+- Continuous document flow with A4 page boundary guides — no JS page packer clipping.
+- Multiple resume variants under the Resumes workspace; each can pick a layout: Classic, Split, or Compact.
+- PDF download uses the active resume variant.
+
 
 ## Deployment Notes
 

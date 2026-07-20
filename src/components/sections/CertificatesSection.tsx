@@ -133,8 +133,11 @@ export default function CertificatesSection({
               const sourceIndex = items.findIndex((entry) => entry.id === item.id);
               return (
               <SortableCertCard key={item.id} id={item.id} isEditing={isEditing && showListActions}>
+                <div
+                  className={`resume-entry ${item.pageBreakBefore ? 'resume-page-break-before' : ''}`}
+                >
                 {isEditing && showListActions && (
-                  <div className="mb-1 flex items-center justify-between gap-2">
+                  <div className="mb-1 flex items-center justify-between gap-2 no-print">
                     <div className="flex items-center gap-2 text-[11px] text-gray-400">
                       <button
                         type="button"
@@ -156,8 +159,21 @@ export default function CertificatesSection({
                       >
                         Down
                       </button>
+                      <label className="flex items-center gap-1">
+                        <input
+                          type="checkbox"
+                          checked={Boolean(item.pageBreakBefore)}
+                          onChange={(e) =>
+                            updateItem(sourceIndex, {
+                              pageBreakBefore: e.target.checked ? true : undefined,
+                            })
+                          }
+                        />
+                        Page break before
+                      </label>
                     </div>
                     <button
+                      type="button"
                       onClick={() => removeItem(sourceIndex)}
                       aria-label={`Remove certificate ${item.title}`}
                       className="z-10 flex h-6 w-6 items-center justify-center rounded-full bg-red-100 text-xs text-red-500 opacity-0 transition-opacity hover:bg-red-200 group-hover:opacity-100"
@@ -228,6 +244,7 @@ export default function CertificatesSection({
                 )}
 
                 {i < visibleItems.length - 1 && <hr className="mt-3 border-dashed border-gray-200" />}
+                </div>
               </SortableCertCard>
               );
             })}

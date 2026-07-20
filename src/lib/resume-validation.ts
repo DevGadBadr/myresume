@@ -8,6 +8,7 @@ import {
   type LegacyResumeTemplateSelection,
 } from '@/lib/template-content';
 import { normalizeLayoutSettings } from '@/lib/layout-settings';
+import { normalizeLayoutId } from '@/layouts';
 import type {
   CertEntry,
   ContactLink,
@@ -108,7 +109,7 @@ function readPersonalInfo(value: unknown): PersonalInfo {
 
 function readExperienceEntry(value: unknown, path: string): ExperienceEntry {
   const record = readObject(value, path);
-  return {
+  const entry: ExperienceEntry = {
     id: readString(record.id, `${path}.id`),
     role: readString(record.role, `${path}.role`),
     roleSubtitle: readString(record.roleSubtitle, `${path}.roleSubtitle`),
@@ -116,6 +117,10 @@ function readExperienceEntry(value: unknown, path: string): ExperienceEntry {
     period: readString(record.period, `${path}.period`),
     bullets: readStringArray(record.bullets, `${path}.bullets`),
   };
+  if (record.pageBreakBefore === true) {
+    entry.pageBreakBefore = true;
+  }
+  return entry;
 }
 
 function readProjectCredentialField(value: unknown, path: string): ProjectCredentialField {
@@ -164,17 +169,24 @@ function readProjectEntry(value: unknown, path: string): ProjectEntry {
   if (record.deployment !== undefined) {
     entry.deployment = readProjectDeployment(record.deployment, `${path}.deployment`);
   }
+  if (record.pageBreakBefore === true) {
+    entry.pageBreakBefore = true;
+  }
   return entry;
 }
 
 function readEducationEntry(value: unknown, path: string): EducationEntry {
   const record = readObject(value, path);
-  return {
+  const entry: EducationEntry = {
     id: readString(record.id, `${path}.id`),
     degree: readString(record.degree, `${path}.degree`),
     institution: readString(record.institution, `${path}.institution`),
     period: readString(record.period, `${path}.period`),
   };
+  if (record.pageBreakBefore === true) {
+    entry.pageBreakBefore = true;
+  }
+  return entry;
 }
 
 function readCertificateEntry(value: unknown, path: string): CertEntry {
@@ -187,6 +199,9 @@ function readCertificateEntry(value: unknown, path: string): CertEntry {
   };
   if (typeof record.hours === 'string' && record.hours.trim()) entry.hours = record.hours.trim();
   if (typeof record.link === 'string' && record.link.trim()) entry.link = record.link.trim();
+  if (record.pageBreakBefore === true) {
+    entry.pageBreakBefore = true;
+  }
   return entry;
 }
 
@@ -273,7 +288,7 @@ function readLegacyTemplateSelection(value: unknown, path: string): LegacyResume
   };
 }
 
-function readLayout(value: unknown, path: string): ResumeLayoutSettings {
+function readLayout(value: unknown): ResumeLayoutSettings {
   try {
     return normalizeLayoutSettings(value);
   } catch {
@@ -314,7 +329,7 @@ function readTemplateContent(value: unknown, path: string): ResumeTemplateConten
         })(),
   };
   if (record.layout !== undefined) {
-    content.layout = readLayout(record.layout, `${path}.layout`);
+    content.layout = readLayout(record.layout);
   }
   return content;
 }
@@ -334,6 +349,10 @@ function readLegacyResumeTemplate(value: unknown, path: string): LegacyResumeTem
 
   if (typeof record.summaryOverride === 'string' && record.summaryOverride.trim()) {
     template.summaryOverride = record.summaryOverride.trim();
+  }
+
+  if (record.layoutId !== undefined) {
+    template.layoutId = normalizeLayoutId(record.layoutId);
   }
 
   if (record.content !== undefined) {
@@ -376,12 +395,14 @@ function createDefaultTemplates(data: Omit<ResumeData, 'templates' | 'activeTemp
       id: 'default',
       name: 'Default Resume',
       hideContactInfo: false,
+      layoutId: 'classic',
       content: defaultContent,
     },
     {
       id: 'upwork',
       name: 'Upwork Resume',
       hideContactInfo: true,
+      layoutId: 'classic',
       content: upworkContent,
     },
   ];
@@ -435,10 +456,11 @@ export function normalizeResumeData(value: unknown): ResumeData {
     ...data,
     templates,
     activeTemplateId,
+    layoutId: normalizeLayoutId(record.layoutId),
   };
 
   if (record.layout !== undefined) {
-    resume.layout = readLayout(record.layout, 'layout');
+    resume.layout = readLayout(record.layout);
   }
 
   return migrateTemplates(resume);

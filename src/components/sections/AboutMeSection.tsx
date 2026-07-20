@@ -1,6 +1,7 @@
 'use client';
 
 import { useEditMode } from '@/context/EditModeContext';
+import WordLikeText from '@/components/editor/WordLikeText';
 
 interface AboutMeSectionProps {
   text: string;
@@ -20,15 +21,14 @@ export default function AboutMeSection({
       {showHeading && <h2 className="section-heading">About Me</h2>}
       <div className="bg-[#fdf5f5] border-l-4 border-[#8B0000] pl-3 py-2 rounded-r">
         {isEditing ? (
-          <textarea
+          <WordLikeText
             value={text}
-            onChange={(e) => onChange(e.target.value)}
-            rows={5}
-            className="w-full bg-transparent border-b border-dashed border-[#8B0000] outline-none text-sm text-gray-700 italic leading-relaxed resize-none"
-            style={{ fontFamily: 'inherit' }}
+            onChange={onChange}
+            className="text-sm text-gray-700 italic leading-relaxed"
+            placeholder="Write a short professional summary… (Enter for new line)"
           />
         ) : (
-          <p className="text-sm text-gray-700 italic leading-relaxed">
+          <p className="text-sm text-gray-700 italic leading-relaxed whitespace-pre-wrap">
             &ldquo;{text}&rdquo;
           </p>
         )}

@@ -192,12 +192,14 @@ function buildDefaultTemplates(
       id: 'default',
       name: 'Default Resume',
       hideContactInfo: false,
+      layoutId: 'classic',
       content: deepCloneContent(library),
     },
     {
       id: 'upwork',
       name: 'Upwork Resume',
       hideContactInfo: true,
+      layoutId: 'classic',
       content: {
         ...deepCloneContent(library),
         skills: library.skills.filter((skill) => upworkSkillLabels.has(skill.label)),
@@ -208,6 +210,7 @@ function buildDefaultTemplates(
 
 export const DEFAULT_RESUME_DATA: ResumeData = {
   ...RESUME_LIBRARY_BODY,
+  layoutId: 'classic',
   activeTemplateId: 'default',
   templates: buildDefaultTemplates(RESUME_LIBRARY_BODY),
 };

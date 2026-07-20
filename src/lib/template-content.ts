@@ -136,6 +136,7 @@ export function ensureTemplateContent(data: ResumeLibrary, template: LegacyResum
       name: template.name,
       hideContactInfo: template.hideContactInfo,
       targetTitle: template.targetTitle,
+      layoutId: template.layoutId,
       content: deepCloneContent(template.content),
     };
   }
@@ -145,6 +146,7 @@ export function ensureTemplateContent(data: ResumeLibrary, template: LegacyResum
     name: template.name,
     hideContactInfo: template.hideContactInfo,
     targetTitle: template.targetTitle,
+    layoutId: template.layoutId,
     content: buildContentFromLegacySelection(data, template),
   };
 }
@@ -171,6 +173,7 @@ export function assembleTemplateResume(root: ResumeData, template: ResumeTemplat
     education: content.education,
     certificates: content.certificates,
     layout: cloneLayoutSettings(content.layout),
+    layoutId: template.layoutId ?? root.layoutId,
     activeTemplateId: template.id,
   };
 }
