@@ -16,7 +16,7 @@ interface PrintContentProps {
 export default function PrintContent({ data, hideContactInfo = false, theme }: PrintContentProps) {
   return (
     <EditModeContext.Provider value={{ isEditing: false, toggle: noop }}>
-      <div data-theme={theme}>
+      <div data-theme={theme} className="resume-flow-print-content">
         <ResumeFlowDocument
           data={data}
           hideContactInfo={hideContactInfo}

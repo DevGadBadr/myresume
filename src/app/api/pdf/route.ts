@@ -30,6 +30,9 @@ export async function POST(req: Request) {
 
     // Set viewport to A4 dimensions at 96dpi (210mm × 297mm)
     await page.setViewport({ width: 794, height: 1123, deviceScaleFactor: 2 });
+    // Export from the same media mode as the on-screen preview so pagination
+    // uses identical font metrics and spacing.
+    await page.emulateMediaType('screen');
 
     const printUrl = new URL(`${APP_BASE_PATH}/print`, getPrintOrigin(req));
     if (body?.templateId) {
@@ -47,7 +50,9 @@ export async function POST(req: Request) {
     });
 
     const pdf = await page.pdf({
-      format: 'A4',
+      width: '210mm',
+      height: '297mm',
+      scale: 1,
       printBackground: true,
       preferCSSPageSize: true,
       margin: { top: '0', right: '0', bottom: '0', left: '0' },

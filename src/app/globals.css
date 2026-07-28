@@ -356,10 +356,12 @@
 
 /* Print styles — continuous document flow */
 @media print {
+  html,
   body {
     background: white !important;
   }
 
+  .resume-flow-screen,
   .resume-flow-print,
   .resume-flow-print-content {
     width: 210mm !important;
@@ -370,6 +372,8 @@
   }
 
   .resume-print-page {
+    width: 210mm !important;
+    min-height: 297mm !important;
     break-after: page;
     page-break-after: always;
     box-shadow: none !important;
