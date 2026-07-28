@@ -18,6 +18,10 @@ interface AiTailorPanelProps {
 
 type PanelStatus = 'idle' | 'generating' | 'chatting' | 'error';
 
+type ChatTimelineMessage = AiChatMessage & {
+  pending?: boolean;
+};
+
 function emptySummary(): AiTailorSummary {
   return {
     overview: '',
@@ -198,6 +202,27 @@ export default function AiTailorPanel({ data, onChange, onSavedToResumes }: AiTa
   }, [data.templates, draftTemplate, onChange, onSavedToResumes, saveChecked]);
 
   const busy = status === 'generating' || status === 'chatting';
+  const chatTimeline = useMemo<ChatTimelineMessage[]>(() => {
+    if (status !== 'chatting') {
+      return messages;
+    }
+
+    return [
+      ...messages,
+      {
+        role: 'assistant',
+        content: 'Reviewing your request and updating the draft…',
+        pending: true,
+      },
+    ];
+  }, [messages, status]);
+
+  const statusMessage =
+    status === 'generating'
+      ? 'AI is generating a tailored resume draft.'
+      : status === 'chatting'
+        ? 'AI is refining the draft based on your latest message.'
+        : null;
 
   return (
     <div className="grid gap-6 xl:grid-cols-[minmax(320px,400px)_minmax(0,1fr)]">
@@ -278,6 +303,22 @@ export default function AiTailorPanel({ data, onChange, onSavedToResumes }: AiTa
         </div>
 
         {error && <p className="text-xs text-red-600">{error}</p>}
+        {statusMessage && (
+          <div className="rounded border border-[var(--resume-border)] bg-[var(--resume-paper)] px-3 py-2">
+            <div className="flex items-center gap-2">
+              <span
+                className="inline-flex h-2 w-2 rounded-full bg-[var(--resume-text)] opacity-70"
+                aria-hidden="true"
+              />
+              <p className="text-xs font-medium text-[var(--resume-text)]">{statusMessage}</p>
+            </div>
+            <p className="mt-1 text-[11px] text-[var(--resume-muted)]">
+              {status === 'generating'
+                ? 'This can take a few seconds depending on the job description.'
+                : 'You can review the last draft while the next response is being prepared.'}
+            </p>
+          </div>
+        )}
 
         {draftTemplate && (
           <>
@@ -339,8 +380,8 @@ export default function AiTailorPanel({ data, onChange, onSavedToResumes }: AiTa
                 Refine with chat
               </h3>
               <div className="max-h-48 space-y-2 overflow-y-auto rounded border border-[var(--resume-border)] p-2">
-                {messages.map((message, index) => (
-                  <p
+                {chatTimeline.map((message, index) => (
+                  <div
                     key={`${message.role}-${index}`}
                     className={`text-xs ${
                       message.role === 'user'
@@ -351,8 +392,15 @@ export default function AiTailorPanel({ data, onChange, onSavedToResumes }: AiTa
                     <span className="font-semibold">
                       {message.role === 'user' ? 'You' : 'AI'}:
                     </span>{' '}
-                    {message.content}
-                  </p>
+                    <span className={message.pending ? 'italic' : undefined}>{message.content}</span>
+                    {message.pending && (
+                      <span className="ml-2 inline-flex items-center gap-1 align-middle" aria-label="AI is typing">
+                        <span className="h-1.5 w-1.5 rounded-full bg-current opacity-40" />
+                        <span className="h-1.5 w-1.5 rounded-full bg-current opacity-60" />
+                        <span className="h-1.5 w-1.5 rounded-full bg-current opacity-80" />
+                      </span>
+                    )}
+                  </div>
                 ))}
               </div>
               <div className="flex gap-2">
@@ -375,7 +423,7 @@ export default function AiTailorPanel({ data, onChange, onSavedToResumes }: AiTa
                   disabled={busy || !chatInput.trim()}
                   className="rounded border border-[var(--resume-border)] px-3 py-1.5 text-xs text-[var(--resume-text)] disabled:opacity-50"
                 >
-                  {status === 'chatting' ? '…' : 'Send'}
+                  {status === 'chatting' ? 'AI responding…' : 'Send'}
                 </button>
               </div>
             </section>
