@@ -3,6 +3,7 @@
 .env
 node_modules/
 .next/
+.deploy-deps-stamp
 .claude
 docker-compose.yml
 CLAUDE.md

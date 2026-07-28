@@ -35,15 +35,44 @@ echo "    npm:   $(command -v npm) ($(npm -v))"
 echo "    app:   $APP_NAME"
 
 # --- Dependencies ---
-echo "[1/5] Installing dependencies..."
-if [[ -f package-lock.json ]]; then
-  npm ci
+# Skip npm ci when node_modules is healthy and package-lock.json is unchanged.
+# Force with: FORCE_INSTALL=1 ./scripts/deploy.sh   or   ./scripts/deploy.sh --install
+DEPS_STAMP="$ROOT_DIR/.deploy-deps-stamp"
+FORCE_INSTALL="${FORCE_INSTALL:-0}"
+for arg in "$@"; do
+  case "$arg" in
+    --install|--force-install) FORCE_INSTALL=1 ;;
+  esac
+done
+
+need_install=0
+if [[ "$FORCE_INSTALL" == "1" ]]; then
+  need_install=1
+  echo "[1/5] Installing dependencies (forced)..."
+elif [[ ! -x "$ROOT_DIR/node_modules/.bin/next" ]]; then
+  need_install=1
+  echo "[1/5] Installing dependencies (next binary missing)..."
+elif [[ -f package-lock.json && ( ! -f "$DEPS_STAMP" || package-lock.json -nt "$DEPS_STAMP" ) ]]; then
+  need_install=1
+  echo "[1/5] Installing dependencies (package-lock.json changed)..."
+elif [[ ! -f package-lock.json && ( ! -f "$DEPS_STAMP" || package.json -nt "$DEPS_STAMP" ) ]]; then
+  need_install=1
+  echo "[1/5] Installing dependencies (package.json changed)..."
 else
-  npm install
+  echo "[1/5] Dependencies up to date — skipping install"
+fi
+
+if [[ "$need_install" == "1" ]]; then
+  if [[ -f package-lock.json ]]; then
+    npm ci
+  else
+    npm install
+  fi
+  date -u +"%Y-%m-%dT%H:%M:%SZ" > "$DEPS_STAMP"
 fi
 
 if [[ ! -x "$ROOT_DIR/node_modules/.bin/next" ]]; then
-  echo "error: next binary missing after install (node_modules/.bin/next)." >&2
+  echo "error: next binary missing (node_modules/.bin/next)." >&2
   exit 1
 fi
 
