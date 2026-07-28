@@ -45,12 +45,16 @@ When you use the provided `docker-compose.yml`, the Mongo container reads `.env.
 - Ensure the VPS has Chromium dependencies available for Puppeteer.
 - Production is served behind nginx at `https://devgadbadr.me/myresume`.
 - The recommended runtime is PM2 using `ecosystem.config.cjs`.
-- CI validates every push and pull request, and deploys automatically on pushes to `master`.
-- Required GitHub secrets for deployment:
-  - `RESUME_DEPLOY_HOST`
-  - `RESUME_DEPLOY_USER`
-  - `RESUME_DEPLOY_SSH_KEY`
-  - `RESUME_DEPLOY_PORT` (optional if SSH uses `22`)
+- GitHub Actions deploys automatically on pushes to `master` by using a self-hosted runner installed on the VPS.
+- The deploy workflow expects the runner to have the labels `self-hosted`, `linux`, `x64`, and `resume-vps`.
+- The runner executes the deploy from the existing checkout at `/root/Gad/web/Apps/resume`; no SSH deploy secrets are required anymore.
+- The runner user must be able to access:
+  - `/root/Gad/web/Apps/resume`
+  - Node and npm, including `nvm` if Node is installed through it
+  - PM2
+- The workflow updates the live checkout with `git fetch origin` and `git reset --hard origin/master`, then runs `bash scripts/deploy.sh`.
+- `scripts/deploy.sh` performs `npm ci`, installs Puppeteer Chrome, builds the app, and reloads PM2 for `resume-3007`.
+- Use a dedicated deployment checkout only; avoid manual edits in `/root/Gad/web/Apps/resume` because deploy resets it to `origin/master`.
 - The VPS must keep a non-committed `.env.production.local` or `.env.local` with:
   - `MONGODB_URI`
   - `AUTH_SECRET`
@@ -58,3 +62,8 @@ When you use the provided `docker-compose.yml`, the Mongo container reads `.env.
   - `ADMIN_PASSWORD`
   - `OPENAI_API_KEY`
   - `OPENAI_MODEL`
+- Recommended runner setup:
+  1. Install the GitHub Actions self-hosted runner on the VPS under a dedicated service account.
+  2. Register it to this repository with the `resume-vps` label.
+  3. Ensure the service starts on boot and inherits the environment needed for `nvm` and PM2.
+  4. Verify the runner account has permission to read the repo path and reload the PM2 process.
