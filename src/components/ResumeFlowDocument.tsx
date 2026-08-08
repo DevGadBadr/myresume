@@ -74,6 +74,8 @@ export default function ResumeFlowDocument({
   const measureRef = useRef<HTMLDivElement>(null);
   const [pages, setPages] = useState<PackedPage[]>([{ blockIds: [] }]);
   const [isReady, setIsReady] = useState(false);
+  /** Bumps after a print-mode measure so we only mark ready once packed pages are painted. */
+  const [printPackGeneration, setPrintPackGeneration] = useState(0);
 
   const resolvedLayoutId = normalizeLayoutId(layoutId ?? data.layoutId);
   const layoutDef = useMemo(() => getLayoutDefinition(resolvedLayoutId), [resolvedLayoutId]);
@@ -108,8 +110,13 @@ export default function ResumeFlowDocument({
       heights.set(id, element.offsetHeight);
     });
 
+    const stack = root.querySelector('.resume-flow-stack');
+    const gapPx = stack
+      ? Number.parseFloat(window.getComputedStyle(stack).rowGap || window.getComputedStyle(stack).gap) || 0
+      : 0;
+
     const contentHeightPx = contentHeightMm * MM_TO_PX;
-    setPages(packFlowBlocks(blocks, heights, contentHeightPx));
+    setPages(packFlowBlocks(blocks, heights, contentHeightPx, { gapPx }));
   }, [blocks, contentHeightMm]);
 
   useEffect(() => {
@@ -124,29 +131,64 @@ export default function ResumeFlowDocument({
   useEffect(() => {
     if (!printMode) {
       setIsReady(true);
+      document.body.classList.remove('resume-print-export');
+      delete document.body.dataset.printReady;
+      delete document.body.dataset.printPageCount;
       return;
     }
 
     let cancelled = false;
     setIsReady(false);
+    document.body.classList.add('resume-print-export');
     document.body.dataset.printReady = 'false';
+    delete document.body.dataset.printPageCount;
 
     const waitForLayout = async () => {
       await document.fonts.ready;
       await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
       await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
-      measureAndPack();
-      await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
       if (cancelled) return;
-      setIsReady(true);
-      document.body.dataset.printReady = 'true';
+      measureAndPack();
+      setPrintPackGeneration((generation) => generation + 1);
     };
 
     void waitForLayout();
     return () => {
       cancelled = true;
+      document.body.classList.remove('resume-print-export');
     };
   }, [printMode, measureAndPack, data, resolvedLayoutId]);
+
+  useEffect(() => {
+    if (!printMode || printPackGeneration === 0) {
+      return;
+    }
+
+    let cancelled = false;
+
+    const markReadyAfterPaint = async () => {
+      await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+      await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+      if (cancelled) return;
+
+      const painted = document.querySelectorAll('.resume-print-page').length;
+      if (painted !== pages.length) {
+        // React commit may still be pending; retry on next frames.
+        await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+        await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+      }
+      if (cancelled) return;
+
+      document.body.dataset.printPageCount = String(pages.length);
+      setIsReady(true);
+      document.body.dataset.printReady = 'true';
+    };
+
+    void markReadyAfterPaint();
+    return () => {
+      cancelled = true;
+    };
+  }, [printMode, printPackGeneration, pages]);
 
   const pageBlocks = (page: PackedPage) =>
     page.blockIds
@@ -177,6 +219,7 @@ export default function ResumeFlowDocument({
         className={`resume-word-stack flex flex-col items-center ${printMode ? 'resume-flow-print' : ''} ${
           printMode && isReady ? 'is-ready' : ''
         }`}
+        data-print-page-count={printMode ? pages.length : undefined}
       >
         {pages.map((page, pageIndex) => (
           <div

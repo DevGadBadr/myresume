@@ -4,6 +4,11 @@ export interface PackedPage {
   blockIds: string[];
 }
 
+export interface PackFlowBlocksOptions {
+  /** Flex gap between stacked blocks (e.g. 0.85rem), in CSS pixels. */
+  gapPx?: number;
+}
+
 /**
  * Pack atomic blocks into pages. Never splits a block.
  * Headings marked keepWithNext are never left alone at the bottom of a page.
@@ -11,17 +16,33 @@ export interface PackedPage {
 export function packFlowBlocks(
   blocks: FlowBlock[],
   heights: Map<string, number>,
-  contentHeightPx: number
+  contentHeightPx: number,
+  options: PackFlowBlocksOptions = {}
 ): PackedPage[] {
+  const gapPx = Math.max(0, options.gapPx ?? 0);
+
   if (blocks.length === 0) {
     return [{ blockIds: [] }];
   }
 
   const pages: PackedPage[] = [{ blockIds: [] }];
-  let remaining = contentHeightPx;
   const byId = new Map(blocks.map((block) => [block.id, block]));
 
   const heightOf = (id: string) => Math.max(0, heights.get(id) ?? 0);
+
+  const usedHeight = (ids: string[]) => {
+    if (ids.length === 0) {
+      return 0;
+    }
+    let sum = 0;
+    for (const id of ids) {
+      sum += heightOf(id);
+    }
+    return sum + (ids.length - 1) * gapPx;
+  };
+
+  const combinedHeight = (existingIds: string[], next: FlowBlock[]) =>
+    usedHeight([...existingIds, ...next.map((block) => block.id)]);
 
   const flushLonelyHeadings = (page: PackedPage): FlowBlock[] => {
     const pushed: FlowBlock[] = [];
@@ -31,18 +52,12 @@ export function packFlowBlocks(
       if (!last?.keepWithNext) break;
       page.blockIds.pop();
       pushed.unshift(last);
-      remaining += heightOf(lastId);
     }
     return pushed;
   };
 
   const startNewPage = (seed: FlowBlock[] = []) => {
-    pages.push({ blockIds: [] });
-    remaining = contentHeightPx;
-    for (const block of seed) {
-      pages[pages.length - 1].blockIds.push(block.id);
-      remaining -= heightOf(block.id);
-    }
+    pages.push({ blockIds: seed.map((block) => block.id) });
   };
 
   let pendingKeep: FlowBlock[] = [];
@@ -55,10 +70,9 @@ export function packFlowBlocks(
 
     const group = [...pendingKeep, block];
     pendingKeep = [];
-    const groupHeight = group.reduce((sum, item) => sum + heightOf(item.id), 0);
     const current = pages[pages.length - 1];
     const forceBreak = Boolean(block.pageBreakBefore) && current.blockIds.length > 0;
-    const fits = groupHeight <= remaining + 0.5;
+    const fits = combinedHeight(current.blockIds, group) <= contentHeightPx + 0.5;
 
     if ((!fits && current.blockIds.length > 0) || forceBreak) {
       const lonely = flushLonelyHeadings(current);
@@ -69,20 +83,17 @@ export function packFlowBlocks(
     // Oversized group on an empty page: still place whole group (never clip).
     for (const item of group) {
       current.blockIds.push(item.id);
-      remaining -= heightOf(item.id);
     }
   }
 
   if (pendingKeep.length > 0) {
     const current = pages[pages.length - 1];
-    const groupHeight = pendingKeep.reduce((sum, item) => sum + heightOf(item.id), 0);
-    if (groupHeight > remaining + 0.5 && current.blockIds.length > 0) {
+    if (combinedHeight(current.blockIds, pendingKeep) > contentHeightPx + 0.5 && current.blockIds.length > 0) {
       const lonely = flushLonelyHeadings(current);
       startNewPage([...lonely, ...pendingKeep]);
     } else {
       for (const item of pendingKeep) {
         current.blockIds.push(item.id);
-        remaining -= heightOf(item.id);
       }
     }
   }

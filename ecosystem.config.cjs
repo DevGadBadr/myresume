@@ -7,6 +7,7 @@ module.exports = {
       args: 'run start',
       env: {
         NODE_ENV: 'production',
+        PUPPETEER_CACHE_DIR: `${process.env.HOME || '/root'}/.cache/puppeteer`,
       },
       autorestart: true,
       max_restarts: 10,

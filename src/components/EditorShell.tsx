@@ -204,6 +204,56 @@ export default function EditorShell({ initialData, canEdit }: EditorShellProps) 
     };
   }, []);
 
+  const flushSave = useCallback(async () => {
+    if (!canEdit) {
+      return;
+    }
+
+    abortControllerRef.current?.abort();
+    const requestSequence = ++saveSequenceRef.current;
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+    setSaveStatus('saving');
+    setSaveError(null);
+
+    try {
+      const response = await fetch(`${APP_BASE_PATH}/api/resume`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+        signal: controller.signal,
+      });
+
+      const payload = (await response.json().catch(() => null)) as
+        | { savedAt?: string; error?: string }
+        | null;
+
+      if (!response.ok) {
+        throw new Error(payload?.error ?? 'Failed to save resume');
+      }
+
+      if (requestSequence !== saveSequenceRef.current) {
+        return;
+      }
+
+      setSaveStatus('saved');
+      setLastSavedAt(payload?.savedAt ?? new Date().toISOString());
+      window.localStorage.removeItem(RESUME_DRAFT_STORAGE_KEY);
+
+      if (resetStatusTimerRef.current) {
+        clearTimeout(resetStatusTimerRef.current);
+      }
+      resetStatusTimerRef.current = setTimeout(() => setSaveStatus('idle'), 2000);
+    } catch (error) {
+      if (controller.signal.aborted) {
+        return;
+      }
+      setSaveStatus('error');
+      setSaveError(error instanceof Error ? error.message : 'Failed to save resume');
+      throw error;
+    }
+  }, [canEdit, data]);
+
   const handleDownloadPDF = useCallback(async () => {
     if (pdfLoading) {
       return;
@@ -211,16 +261,29 @@ export default function EditorShell({ initialData, canEdit }: EditorShellProps) 
 
     setPdfLoading(true);
     try {
+      if (canEdit && (saveStatus === 'dirty' || saveStatus === 'saving' || saveStatus === 'error')) {
+        await flushSave();
+      }
+
+      const source = workspaceMode === 'main' ? 'library' : 'template';
       const templateId =
-        workspaceMode === 'templates' || workspaceMode === 'ai'
+        source === 'template'
           ? activeTemplateId
           : (data.activeTemplateId ?? DEFAULT_TEMPLATE_ID);
-      const templateName =
-        data.templates.find((template) => template.id === templateId)?.name ?? 'resume';
+      const fileLabel =
+        source === 'library'
+          ? data.personalInfo?.name || 'library-resume'
+          : (data.templates.find((template) => template.id === templateId)?.name ?? 'resume');
+
       const res = await fetch(`${APP_BASE_PATH}/api/pdf`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ templateId, theme }),
+        body: JSON.stringify({
+          source,
+          templateId: source === 'template' ? templateId : undefined,
+          theme,
+          resume: data,
+        }),
       });
       if (!res.ok) {
         throw new Error('PDF generation failed');
@@ -234,7 +297,7 @@ export default function EditorShell({ initialData, canEdit }: EditorShellProps) 
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `${templateName.toLowerCase().replace(/[^a-z0-9]+/g, '-') || 'resume'}.pdf`;
+      a.download = `${fileLabel.toLowerCase().replace(/[^a-z0-9]+/g, '-') || 'resume'}.pdf`;
       document.body.appendChild(a);
       a.click();
       a.remove();
@@ -245,7 +308,16 @@ export default function EditorShell({ initialData, canEdit }: EditorShellProps) 
     } finally {
       setPdfLoading(false);
     }
-  }, [activeTemplateId, data.activeTemplateId, data.templates, pdfLoading, theme, workspaceMode]);
+  }, [
+    activeTemplateId,
+    canEdit,
+    data,
+    flushSave,
+    pdfLoading,
+    saveStatus,
+    theme,
+    workspaceMode,
+  ]);
 
   const handleLibraryLayoutChange = useCallback((nextLayoutId: ResumeLayoutId) => {
     setData((current) => ({ ...current, layoutId: nextLayoutId }));

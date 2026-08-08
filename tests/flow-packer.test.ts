@@ -61,3 +61,22 @@ test('packFlowBlocks respects pageBreakBefore', () => {
   assert.deepEqual(pages[0].blockIds, ['a']);
   assert.deepEqual(pages[1].blockIds, ['b']);
 });
+
+test('packFlowBlocks accounts for inter-block gap when deciding page breaks', () => {
+  const blocks = [
+    { id: 'a', kind: 'about' as const },
+    { id: 'b', kind: 'project' as const, entryId: '1' },
+  ];
+  const heights = new Map([
+    ['a', 240],
+    ['b', 240],
+  ]);
+  // Without gap both fit in 500; with 30px gap they need 510 → second page.
+  const withoutGap = packFlowBlocks(blocks, heights, 500);
+  assert.equal(withoutGap.length, 1);
+
+  const withGap = packFlowBlocks(blocks, heights, 500, { gapPx: 30 });
+  assert.equal(withGap.length, 2);
+  assert.deepEqual(withGap[0].blockIds, ['a']);
+  assert.deepEqual(withGap[1].blockIds, ['b']);
+});
